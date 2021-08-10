@@ -1,0 +1,25 @@
+matplotlib
+	plt.rcParams['font.sans-serif'] = 'SimHei'          # 使图形中的中文正常编码显示
+	plt.rcParams['axes.unicode_minus'] = False          # 使坐标轴刻度表签正常显示正负号
+	plt.scatter()                                       # 散点图
+	plt.scatter(range(df['Label'].shape[0]),np.sort(df['Label'].values))  # 散点图示例
+	plt.hist()                                          # 直方图
+	plt.hist(rwidth=0.9,bins=100)                       # 直方图示例
+
+
+pandas
+    pd.set_option('display.max_columns', None)          # 显示所有列
+    pd.set_option('display.max_rows', None)             # 显示所有行
+    pd.set_option('max_colwidth',100)                   # 设置value的显示长度为100，默认为50
+    DataFrame.drop(labels='xxx',axis=1,inplace=True)    # 丢掉数据集中的部分数据
+    DataFrame.isnull()                                  # 检测无效数据
+    DataFrame.sort_values()                             # 排序
+
+
+seaborn
+    sns.heatmap()                                       # 热力图
+    # 热力图示例
+    plt.figure(figsize=(20, 10))
+    sns.heatmap(corr,square = True, annot=True, fmt='0.2f',vmax=0.8)
+    sns.regplot()                                       # 数据和线性回归模型拟合
+    sns.boxplot()                                       # 箱型图
