@@ -1,0 +1,31 @@
+关闭anaconda自动进入base虚拟环境
+	conda config --set auto_activate_base false
+打开虚拟环境
+	conda activate spacename
+
+创建虚拟环境
+	conda create -n your_env_name python=X.X (Anaconda安装目录envs文件下找到)
+	同时安装必要的包
+	conda create -n env_name numpy matplotlib python=2.7
+
+激活虚拟环境
+	Linux:  source activate your_env_name
+	Windows: activate your_env_name
+
+检查当前python版本
+	python --version
+
+退出虚拟环境
+	Linux:  source deactivate your_env_name
+	Windows:deactivate env_name，也可以使用`activate root`切回root环境
+
+删除虚拟环境：
+	conda remove -n your_env_name --all
+删除虚拟环境中的包：
+	conda remove --name $your_env_name  $package_name
+
+conda常用命令
+    conda list：查看安装了哪些包。
+    conda install package_name(包名)：安装包
+    conda env list 或 conda info -e：查看当前存在哪些虚拟环境
+    conda update conda：检查更新当前conda
