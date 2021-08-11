@@ -79,7 +79,7 @@ assert dumpoff | enable_diag | filter_past
 -e <new_name_for_main>
 	指定PLI应用时main()程序的名称
 
--f <filename>
+-f <filename> ***
 	指定文件列表的文件名，文件中可包括源代码文件的路径和名称，也可以包括编译选项参数
 
 -file filename
@@ -103,7 +103,7 @@ assert dumpoff | enable_diag | filter_past
 -j<number_of_processes>
 	设定并行编译的进程数，“j”后面没有空格
 
--l <filename>
+-l <filename> ***
 	指定记录VCS编译和运行信息的log文件名
 
 -line
@@ -134,7 +134,7 @@ assert dumpoff | enable_diag | filter_past
 -ntb
 	使能ntb（Native TestBench），支持OpenVera验证平台语言结构。
 
--o <name>
+-o <name> ***
 	指定编译生成的可执行文件的名称，默认是simv
 
 -timescale=<time_unit>/<time_precision>
@@ -164,13 +164,13 @@ assert dumpoff | enable_diag | filter_past
 -V
 	使能verbose模式
 
--v <filename>
+-v <filename> ***
 	指定verilog库文件
 
--y <dir_pathname>
+-y <dir_pathname> ***
 	指定verilog库路径
 
-+libext+<extension>
++libext+<extension> ***
 	让VCS在verilog库路径下搜索指定的扩展名文件，与-y配合
 
 -vera
@@ -194,7 +194,7 @@ assert dumpoff | enable_diag | filter_past
 +csdf+precompile
 	在VCS编译源代码时预先SDF文件
 
-+define+<macro_name>=<value>
++define+<macro_name>=<value> ***
 	定义一个文本宏，与源文件中的`ifdef配合
 
 +error+<n>
@@ -312,6 +312,11 @@ assert dumpoff | enable_diag | filter_past
 
 +vera_mload=<filename>
 	定义一个包括多个Vera对象文件的文本文件
+
+-l
+	输出日志文件
+-s
+	time 0 时停止仿真
 ------------------------------------------------------------------------------------------
 3. VCS调试模式常用选项
 
@@ -337,6 +342,14 @@ assert dumpoff | enable_diag | filter_past
 	保存一个VirSim命令的log文件，默认是VirSim.log
 ******************************************************************************************
 ******************************************************************************************
+
+
+
+
+
+
+
+
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
