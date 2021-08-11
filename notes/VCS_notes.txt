@@ -1,0 +1,357 @@
+******************************************************************************************
+******************************************************************************************
+VCS仿真事件队列
+
+Start Simulation
+	Read all initial  and always blocks up to first delayed "=" or first event control;
+	Read all continuous assigns.
+then
+	Keeping order within each procedural block, execute undelayed statements read.
+	Read past level-sensitive event controls fulfilled, but only to first delay.
+set t = 0 ( current time )
+action region
+	primitive inputs -> outputs;  (元语句，与非门、CMOS、PMOS之类)
+	$display();
+	Continuous assign;
+	Blocking assignments;
+	Nonblocking RHS      (只计算右侧表达式)
+inaction region
+	#0
+Nonblocking assign region
+	v <- RHS (Nonblocking)
+monitor region
+	$monitor
+******************************************************************************************
+******************************************************************************************
+1. 行为级描述
+2. RTL（寄存器传输级）
+3. Gate-level（门级），与具体工艺库相关（TSMC，SMIC，CSMC）
+******************************************************************************************
+******************************************************************************************
+     Verilog/SV files	(mem.v cpu.sv)
+-> C file		(mem.c cpu.c)
+-> Object file	(mem.o cpu.o)
+-> simv		(executable)
+******************************************************************************************
+******************************************************************************************
+1. VCS常用的编译选项
+
+assert dumpoff | enable_diag | filter_past
+	定义SystemVerilog断言（SVA）
+	dumpoff：禁止将SVA信息DUMP到VPD中
+	enable_diag：使能SVA结果报告由运行选项进一步控制
+	filter_past：忽略$past中的子序列
+
+-cm <options>
+	指定覆盖率的类型，包括：line（行覆盖）、cond（条件覆盖）、fsm（状态机覆盖）、tgl（翻转率覆盖）、path（路径覆盖）、branch（分支覆盖）和assert（断言覆盖）。
+	如果包括两种或以上的覆盖率类型，可用“+”，如-cm line+cond+fsm+tgl
+
+-cm_assert_hier <filename>
+	将SVA覆盖率统计限定在文件列表中指定的module层次。
+
+-cm_cond <arguments>
+	进一步细化条件覆盖率的统计方式，包括：basic,std,full,allops,event,anywidth,for,tf,sop等选项。
+
+-cm_count
+	在统计是否覆盖的基础上，进一步统计覆盖的次数
+
+-cm_dir <directory_path_name>
+	指定覆盖率统计结果的存放路径，默认是simv.cm
+
+-cm_hier <filename>
+	指定覆盖率统计的范围，范围在文件中定义，可以指定module名、层次名和源文件等。
+
+-cm_log <filename>
+	指定仿真过程中记录覆盖率的log文件名
+
+-cm_name <filename>
+	指定保存覆盖率结果的文本文件的名称
+
+-cm obc
+	使能可观察（observed）覆盖率的编译。传统的覆盖率跟功能的正确性毫无关联，可观察覆盖率通过设置观察点，一定程度上将代码行覆盖率与功能正确性关联起来。
+
+-comp64
+	在64-bit模式下对设计进行编译，并生成32-bit格式的可执行文件用于32-bit模式仿真
+
+-debug 或 -debug_all
+	使能UCLI命令行
+
+-e <new_name_for_main>
+	指定PLI应用时main()程序的名称
+
+-f <filename>
+	指定文件列表的文件名，文件中可包括源代码文件的路径和名称，也可以包括编译选项参数
+
+-file filename
+	类似于-f，但文件内容更灵活，可以包含PLI选项和对象文件，可以使用转义字符等
+
+-full64
+	在64-bit模式下编译，生成64-bit模式仿真的可执行文件
+
+-h or -help
+	列举常用的编译选项和运行选项的参数
+
+-I
+	交互模式的编译，让VCS自动包括+cli，-P virsims.tab选项，并支持VirSim后处理模式下生成VCD+文件。
+
+-ID
+	显示及其的hostid或dongle ID
+
+-ignore <keyword_argument>
+	屏蔽SV中unique/priority型的if或case语句的告警信息，参数包括：unique_checks、priority_checks、all。
+
+-j<number_of_processes>
+	设定并行编译的进程数，“j”后面没有空格
+
+-l <filename>
+	指定记录VCS编译和运行信息的log文件名
+
+-line
+	使能VriSim中的单步运行
+
+-lmc-swift
+	使能LMC SWIFT接口
+
+-Mdir=<directory>
+	指定一个目录让VCS存储编译产生的文件，默认是csrc
+
+-Mlib=<directory>
+	指定一个目录让VCS搜索某个模块是否需要重新编译。
+	与-Mdir配合，可以实现不同模块的增量编译。
+
+-Mmakeprogram=<program>
+	指定用于make对象的程序，默认是make
+
+-Mupdate[=0]
+	默认情况下，VCS编译时会覆盖上次编译生成的makefile。如果想保留上次的makefile，使用-Mupdate=0；如果不带=0，则进行增量编译，并覆盖上次的makefile。
+
+-noIncrComp
+	关闭增量编译
+
+-notice
+	显示详细的诊断信息
+
+-ntb
+	使能ntb（Native TestBench），支持OpenVera验证平台语言结构。
+
+-o <name>
+	指定编译生成的可执行文件的名称，默认是simv
+
+-timescale=<time_unit>/<time_precision>
+	源代码文件中有的包括`timescale编译指令，有的不包括，如果在VCS命令行中，不包括`timescale的源代码文件在最前面，VCS会停止编译。使用-timescale选项为这些在前面且又没有`timescale的源文件指定timescale
+
+-override_timescale=<time_unit>/<time_precision>
+	让源文件统一使用指定的timescale
+
+-P <pli.tab>
+	指定PLI表文件
+
+-pvalues+<parameter_name>=<value>
+	改变指定参数的值
+
+-parameters <filename>
+	通过文件的方式改变参数的值，参数的路径和改变的值均在文件中定义
+
+-q
+	安静模式，屏蔽VCS的编译信息
+
+-R
+	在编译之后立即执行产生的可执行文件
+
+-s
+	刚开始仿真时即停止，一般与-R和+cli配合使用
+
+-V
+	使能verbose模式
+
+-v <filename>
+	指定verilog库文件
+
+-y <dir_pathname>
+	指定verilog库路径
+
++libext+<extension>
+	让VCS在verilog库路径下搜索指定的扩展名文件，与-y配合
+
+-vera
+	指定标准的Vera PLI表文件和对象库
+
++acc+1|2|3|4
+	使能PLI中的ACC（PLI 1.0的一种方式）
+
++cli+[<module_name>=]1|2|3|4
+	使能CLI调试功能
+
++autoprotect[<file_suffix>]
+	生成一个加密的源文件
+
++protect[<file_suffix>]
+	生成一个加密的源文件，只加密`protect/`endprotect部分
+
++putprotect+<target_dir>
+	指定加密文件存放的目录
+
++csdf+precompile
+	在VCS编译源代码时预先SDF文件
+
++define+<macro_name>=<value>
+	定义一个文本宏，与源文件中的`ifdef配合
+
++error+<n>
+	将编译时运行的NTB错误增加到N
+
++incdir+<directory>
+	指定VCS搜索`include指令使用的包含文件的目录，可以用“+”定义多个目录。
+
++maxdelays
+	使用SDF文件中的max值
+
++mindelays
+	使用SDF文件中的min值
+
++typdelays
+	使用SDF文件中的typ值
+
++nbaopt
+	删除非阻塞赋值语句中的延时
+
++neg_tchk
+	使能时序检查中的负延时
+
++nospecify
+	屏蔽specify块中的路径延时和时序检查
+
++notimingcheck
+	屏蔽specify块中的时序检查
+
++nowarnTFMPC
+	屏蔽编译时的“Too few module port connections”告警信息
+
++no_notifier
+	屏蔽一些时序检查系统任务中定义的notifier寄存器的翻转（toggling），但不影响时序violation的报告
+
++no_tchk_msg
+	屏蔽时序检查的告警信息，但不关闭时序检查时notifier寄存器的翻转（toggling）
+
++optconfigfile+<filename>
+	指定Radiant技术和二态仿真用到的配置文件名
+
++prof
+	让VCS在仿真过程中生成一个vcs.prof文件，记录设计中最耗CPU时间的module、层次和verilog结构
+
++race
+	让VCS在仿真过程中生成一个race.out文件，记录设计中所有的竞争冒险
+
++radincr
+	增量编译时使能Radiant技术
+
++sdf_nocheck_celltype
+	SDF反标时不检查SDF文件中的CELLTYPE的一致性
+
++sdfverbose
+	显示SDF反标时的详细告警和错误信息
+
++v2k
+	支持Verilog-2001标准
+
++vc[+abstract][+allhdrs][+list]
+	使用DirectC接口时，使能verilog直接调用C/C++函数
+
++vcs+flush+log
+	加速编译仿真时log文件缓存的刷新频率
+
++vcs+flush+all
+	+vcs+flush+log，+vcs+flush+dump和+vcs+flush+fopen的集合
+
++vcs+initmem+0|1|x|z
+	初始化设计中所有存储器的值
+
++vcs+initreg+0|1|x|z
+	初始化设计中所有寄存器的值
+
++vcs+lic+wait
+	一直等待license
+
++vpi
+	使能VPI
+
++warn=[no]ID|none|all,...
+	使能或关闭告警信息
+------------------------------------------------------------------------------------------
+2. VCS常用的运行选项 
+
+-a <filename>
+	将仿真显示的log信息附件在指定文件尾部
+
+-E <program>
+	执行指定的程序用来显示生成simv可执行文件时VCS使用的编译选项
+
+-i <filename>
+	指定一个VCS执行仿真时包含CLI命令的文件，一般与-ucli配合
+
+-k <filename> | off
+	指定一个文件，用来记录VCS仿真过程中的CLI和VirSim交互命令，默认是vcs.key，off选项是关闭记录。
+
+-sverilog
+	支持SystemVerilog
+
+-ucli
+	使能UCLI命令
+
+-vcd <filename>
+	指定VCD波形文件名，默认是verilog.dump，会被源代码文件中的$dumpfile覆盖
+
++vcs+learn+pli
+	追踪当前仿真的ACC选项，记录在pli_learn.tab文件中，下次仿真时可以用+applylearn来重新编译。
+
++vcs+nostdout
+	关闭所有$monitor和$display的文本输出，但依然会记录在-l的log文件中。
+
++vera_load=<filename.vro>
+	定义Vera对象文件
+
++vera_mload=<filename>
+	定义一个包括多个Vera对象文件的文本文件
+------------------------------------------------------------------------------------------
+3. VCS调试模式常用选项
+
+-RI
+	编译完成之后马上启动VirSim，进入交互模式
+
+-RIG
+	不编译，启动VirSim使用已有的可执行文件，进入交互调试模式。
+
++sim+<simv_name>
+	指定使用的可执行文件名，与-RIG配合
+
+-RPP
+	运行后处理（Post-Processing）模式：启动VirSim，使用VCD+文件
+
+-PP
+	支持在源代码文件中调用$vcdpluson生成VPD文件
+
++cfgfile+<filename>
+	定义一个VCS使用的已建好的场景配置文件
+
++vslogfile[+<filename>]
+	保存一个VirSim命令的log文件，默认是VirSim.log
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
