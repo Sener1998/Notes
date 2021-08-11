@@ -1,0 +1,51 @@
+.PHONY: com cov clean debug
+
+OUTPUT = simv_fsm_moore
+ALL_DEFINE = +define+DUMP_VPD
+
+# Code coverage command
+CM = -cm line+cond+fsm+branch+tgl
+CM_NAME = -cm_name ${OUTPUT}
+CM_DIR = -cm_dir ./${OUTPUT}.vdb
+
+# vpd file name
+VPD_NAME = +vpdfile+${OUTPUT}.vpd
+
+# Compile command
+VCS = vcs -sverilog +v2k -timescale=1ns/1ns	\
+      -debug_all				\
+      +notimeingcheck				\
+      +nospecify				\
+      +vcs+flush+all				\
+      ${CM}					\
+      ${CM_NAME}				\
+      ${CM_DIR}					\
+      ${ALL_DEFINE}				\
+      ${VPD_NAME}				\
+      -o ${OUTPUT}				\
+      -l compile.log
+
+# Simulation command
+SIM = ./${OUTPUT}                \
+      ${CM} ${CM_NAME} ${CM_DIR} \
+      ${VPD_NAME}                \
+      -l ${OUTPUT}.log
+
+# Start compile
+com:
+	${VCS} -f file_list.f
+
+# Start simulation
+sim:
+	${SIM}
+
+# Show the coverage
+cov:
+	dve -covdir *vdb &
+debug:
+	dve -vpd ${OUTPUT}.vpd &
+
+# Start clean
+clean:
+	rm -rf ./csrc *.daidir ./csrc *.log *.vpd *.vdb simv* *.key *race.out*
+
