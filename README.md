@@ -8,6 +8,7 @@ Notes and commands during study.
 4. ubuntu
 5. DynPick------A six axis force sensor
 6. VCS------verilog compile simulate
+7. vim
 
 # Commands
 1. Anaconda
