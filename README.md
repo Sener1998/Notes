@@ -1,5 +1,6 @@
 # Introduce
-Notes and commands during study.
+Notes and commands used.
+Some files during study.
 
 # Notes
 1. Makefile
@@ -13,4 +14,10 @@ Notes and commands during study.
 # Commands
 1. Anaconda
 2. gazebo------for UR5 simulation
+
+# Files
+1. Makefile
+    Makefiles_VCS
+
+
 
