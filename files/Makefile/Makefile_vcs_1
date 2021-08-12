@@ -47,5 +47,5 @@ debug:
 
 # Start clean
 clean:
-	rm -rf ./csrc *.daidir ./csrc *.log *.vpd *.vdb simv* *.key *race.out*
+	rm -rf ./csrc *.daidir *.log *.vpd *.vdb simv* *.key *race.out*
 

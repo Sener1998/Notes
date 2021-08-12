@@ -1,0 +1,43 @@
+.PHONY: com sim cov clean
+
+OUTPUT = sim_dff_exp
+ALL_DEFINE = +define+DUMP_FSDB
+ALL_DEFINE += +define+DFF_STYLE2
+
+# Code coverage command
+CM = -cm line+cond+fsn+branch+tgl
+CM_NAME = -cm_name ${OUTPUT}
+CM_DIR = -cm_dir ./${OUTPUT}.vdb
+
+# Compile command
+VCS = vcs -sverilog +v2k -timescale-1ns/1ns  \
+      -debug_all			     \
+      +notimingcheck			     \
+      ${CM}				     \
+      ${CM_NAME}			     \
+      ${CM_DIR}				     \
+      ${ALL_DEFINE}			     \
+      -o ${OUTPUT}			     \
+      -l compile.log
+
+# simulation command
+SIM = ./${OUTPUT}		 \
+      ${CM} ${CM_NAME} ${CM_DIR} \
+      -l ${OUTPUT}.log 
+
+# Start compile
+com:
+	${VCS} -f file_list.f
+
+# Start simulation
+sim:
+	${SIM}
+
+# Show the coverage
+cov:
+	dve -covdir *vdb &
+
+# Start clean
+clean:
+	rm -rf ./csrc *.daidir *.log *.vpd *.vdb simv* *.key
+
