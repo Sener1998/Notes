@@ -425,8 +425,47 @@ always @(negedge reset)
 在两个always里对同一个寄存器赋值就是多驱动源
 ******************************************************************************************
 ******************************************************************************************
+Use synthesizable subset of Verilog language
+	Give VCS better chance of performance code optimization
+Raise your level of abstraction
+	Give simulator less work to do
+Avoid inefficient constructs
+	Switch level primitives (trans) and bidirectional
+	Srength modeling
+Use small stimulus blocks
+	Avoid large initial blocks (<10,000 lines of code)
+	Use file based stimulus (e.h. $readmemh)
 ******************************************************************************************
 ******************************************************************************************
+genvar 循环变量名；
+generate
+
+    // generate循环语句
+
+    // generate 条件语句
+
+    // generate 分支语句
+
+    // 嵌套的generate语句
+
+endgenerate
+------------------------------------------------------------------------------------------
+// generate-for 循环
+reg [3:0] temp;
+genvar i;
+generate
+for (i = 0; i < 3 ; i = i + 1) begin: 
+    always @(posedge sysclk) begin
+        temp[i] <= 1'b0;
+    end
+end
+endgenerate
+
+// for 循环
+reg [3:0] temp;
+genvar i;
+always @(posedge sysclk) begin
+  for (i = 0; i < 3 ; i = i + 1) begin:
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
