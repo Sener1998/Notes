@@ -391,7 +391,7 @@ Transport delay 传输延迟
 SDF file
 
 $sdf_annotate("/home/.../fsm_moore.sdf",    //sdf文件位置
-	       fsm_top.u_fsm_moore,,,         //给哪个模块标
+	       fsm_top.u_fsm_moore,,,         //给哪个模块使用，该模块的仿真会有延迟
 	       "TYPICAL",                            //使用哪种延迟方式
 	       "1:1:1",                                  //缩放因子
 	       " FROM_MTM");                  
