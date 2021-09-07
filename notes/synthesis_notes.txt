@@ -1,0 +1,72 @@
+后端综合讲座
+1.立项  系统工程师
+2.rtl    soc 由许多CBB拼接而成
+           CBB  数字基础模块
+           验证   ST(system test)    BT(block test)    UT(unit test)(带cpu)
+3-1.FPGA
+3-2.综合SYN   综合出网表（synthesize）
+    只关心综合出的面积多少
+    交付的代码绝对不能有错误和警告，比如端口悬空会导致面积预估出错
+4-1.Formal  验证代码版本对不对
+     这一步错了基本无解
+4-2.SYNSTA  主要是为了产生db和sdc
+db 接口信息，主要是为了产生黑盒连接外层的接口信息。db文件是加密的
+sdc 不用综合的sdc，要用STA出的sdc，综合的时候的时序分析是没有考虑后端的，只是一些setup，所以不够准确
+5.PR  使用网表、db、sdc
+   5.1  FP
+   5.2  PreCTS/PBV
+         靠经验 主要是为了做电源网络
+         物理约束
+   5.3  CTS
+   5.4 Route 布线
+PR和PV之间要做一个STA，修复时序
+6. PV
+   6.1 DRC 物理规则，比如两条线之间的间距
+   6.2 LVS 逻辑和物理连接是否等价，意思和Formal差不多
+
+
+动态时序分析（Dynamic timing simulation）
+静态时序分析（Static Timing Analysis, 简称STA）
+
+
+signoff 通过标准
+    1. 时序
+    2 物理
+
+CRG 时钟复位（Clock Reset Generator）
+
+综合  rtl->netlist  我们使用软件DC
+stand cell  标准元模块
+lib/db
+sdc
+svd 记录综合时进行的所有优化操作
+ddc记录综合后的信息，一个存档
+
+设置时钟
+io延迟设置（主要是这是用户的，标准的io是不需要设置的，因为工艺库里面都有）
+优化权重设置
+
+corner 工艺角
+PVT  RC
+
+P 制造偏差。SS偏慢 TT正常 FF偏快基本符合正态分布，TT最多。
+
+V 电压偏差。稳压器相关
+SS 1.08V       TT 1.2V      FF 1.32V
+
+T 温度偏差。摄氏度
+SS   -40/0/125
+TT   75/85
+FF   -40/125
+
+RC 电阻电容 最大值最小值
+
+track map 
+
+vt map 阈值电压 平衡快慢和漏电 上下等级差10倍
+
+cl map 影响和vt相同与阈值电压对应
+
+memory 很重要
+
+对DC来说，可以把最差的那一些和其他的分开几组，因为每一组只会优化与本组最差的相邻特定范围内的东西，分组可以实现全局优化。
