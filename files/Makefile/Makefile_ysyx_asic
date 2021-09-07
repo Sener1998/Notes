@@ -1,0 +1,90 @@
+.PHONY: sim debug clean
+
+OUTPUT     := asic
+
+# tool
+COMP_TOOL  := vcs
+DEBUG_TOOL := verdi
+
+
+# vcs
+VCS_HOME := /eda/tools/snps/VCS/R-2020.12
+
+
+# verdi
+VERDI_HOME := /eda/tools/snps/verdi/R-2020.12
+NOVAS      := ${VERDI_HOME}/share/PLI/VCS/linux64
+EXTRA      := -P ${NOVAS}/novas.tab  ${NOVAS}/pli.a
+
+
+FILELIST_PATH := ../filelist
+# +incdir+...
+INC_DIR  := -f ${FILELIST_PATH}/dir_rtl.f \
+	    -f ${FILELIST_PATH}/dir_tb.f
+# filelist
+RTL_LIST := -f ${FILELIST_PATH}/rtl_top.f \
+	    -f ${FILELIST_PATH}/rtl_cpu.f \
+            -f ${FILELIST_PATH}/rtl_dev.f \
+            -f ${FILELIST_PATH}/rtl_asic.f \
+            -f ${FILELIST_PATH}/rtl_amba.f
+TB_LIST  := -f ${FILELIST_PATH}/tb.f
+FILELIST := ${RTL_LIST} ${TB_LIST}
+
+
+# define
+ALL_DIFINE := +define+S50 \
+              +define+RANDOMIZE_REG_INIT \
+              +define+CPU_SLT=1
+
+# top
+TOP_NAME := -top asic_system
+
+
+# fsdb
+FSDB_NAME := ${OUTPUT}.fsdb
+
+# log file
+COMP_LOG_NAME := -l ./log/${OUTPUT}_comp.log
+SIM_LOG_NAME  := -l ./log/${OUTPUT}_sim.log
+
+
+
+# compile options
+COMP_OPTIONS  := -full64 +v2k -sverilog -timescale=1ns/10ps \
+                 ${EXTRA} \
+                 +error+500 \
+                 +notimingcheck \
+                 +vcs+flush+all \
+                 +lint=TFIPC-L \
+                 -kdb \
+                 -debug_acc+pp+dmptf+r \
+                 -debug_region+cell+encrypt \
+                 ${ALL_DIFINE} \
+                 ${COMP_LOG_NAME} \
+                 ${FILELIST} \
+                 ${TOP_NAME} \
+                 ${INC_DIR} \
+                 -o ${OUTPUT}
+
+# simulation options
+SIM_OPTIONS := +FSDBNAME=${FSDB_NAME} \
+               ${SIM_LOG_NAME}	
+
+# debug options
+DEBUG_OPTIONS := -ssf ${FSDB_NAME} &
+
+# compile
+comp: 
+	${COMP_TOOL} ${COMP_OPTIONS}
+
+# simulation
+sim:
+	./${OUTPUT} ${SIM_OPTIONS}
+
+# debug
+debug:
+	${DEBUG_TOOL} ${DEBUG_OPTIONS}
+
+# clean
+clean:
+	rm -fr csrc ucli.key DVEfiles INCA_libs ${FSDB_NAME} ${OUTPUT} ${OUTPUT}.daidir ${OUTPUT}.fsdb*
