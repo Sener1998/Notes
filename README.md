@@ -1,6 +1,5 @@
 # Introduce
-Notes and commands used.
-Some files during study.
+学习过程中的笔记和一些练习用的文件
 
 # Notes
 1. makefile
