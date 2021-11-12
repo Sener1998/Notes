@@ -47,8 +47,11 @@ textwrap
 #####################################################################
 #####################################################################
 import subprocess
-创建子线程并执行指令，使用shell
-p_uart = subprocess.Popen("make sim >> ./log/sim_uart.log", shell=True)
+创建子线程并执行指令，使用shell，开启PIPE通道，可以从外面读出数据
+p_uart = subprocess.Popen("make sim", shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1)
+for line in iter(p_uart.stdout.readline, b''):
+    #line是二进制，需要使用line = line.decode()转成字符转
+    print(line) 
 
 杀死子线程，但是执行vcs的仿真时会发现有进程没有被杀死
 p_uart.kill()
