@@ -16,7 +16,7 @@ mb-lite          sstate mirrors for MicroBlaze processors (lite)
 使用wget 可下载到本地，编译时重新设置地址
 ******************************************************************************************
 ******************************************************************************************
-petalinux-build  
+petalinux-config
 
 1.pre mirror设置
 默认是从网络上下载
@@ -26,10 +26,30 @@ file::///path/to/your/downloads/
 2.sstate feed设置
 同pre mirror
 
-
 详细可查看配置界面的yocto配置的帮助
 ******************************************************************************************
 ******************************************************************************************
+安装后各快捷方式指向的程序以及source之后的指令
+
+docnav
+Name=Documentation Navigator
+Exec=/home/sener/Softwares/xilinx/DocNav/docnav
+
+vitis_hls
+Name=Vitis HLS 2021.2
+Exec=/home/sener/Softwares/xilinx/Vitis_HLS/2021.2/bin/vitis_hls
+
+model_composer
+Name=Vitis Model Composer 2021.2
+Exec=/home/sener/Softwares/xilinx/Model_Composer/2021.2/bin/model_composer
+
+vivado
+Name=Vivado 2021.2
+Exec=/home/sener/Softwares/xilinx/Vivado/2021.2/bin/vivado
+
+vitis
+Name=Xilinx Vitis 2021.2
+Exec=/home/sener/Softwares/xilinx/Vitis/2021.2/bin/vitis 
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
