@@ -21,15 +21,50 @@ petalinux-config
 1.pre mirror设置
 默认是从网络上下载
 可以设置为本地的文件
-file::///path/to/your/downloads/
+file://mnt/hgfs/share_linux/petalinux_files/sswreleases/rel-v2021/downloads
 
 2.sstate feed设置
-同pre mirror
+Ex:/mnt/hgfs/share_linux/petalinux_files/sswreleases/rel-v2021/aarch64/sstate-cache
+------------------------------------------------------------------------------------------
+help及ug1144文档中的格式是有些许问题，官网的sstate_rel_2021.2_README亲测可用，内容如下
 
-详细可查看配置界面的yocto配置的帮助
+sstate_rel_2021.2_README
+
+By default petalinux uses sstate-cache and download mirrors from petalinux.xilinx.com
+This README is for the users who uses tool completely offline.
+
+Setting sstate cache
+
+1) Extract the downloaded tar contents of sstate-cache at any location
+2) run petalinux-config
+         -> Yocto Settings
+             ->Local sstate feeds settings
+                  ->local sstate feeds url
+                          (press Enter)
+3) Provide the path of sstate-cache from above
+           Ex: /<path>/aarch64  for Versal projects
+
+4) Save the configurations to use the sstate-cache
+
+Setting download mirror
+
+1) Extract the downloaded tar contents of downloads at any location
+2) run petalinux-config
+        -> Yocto Settings
+                -> Add pre-mirror url
+						          ->  (press Enter)
+							            Clear default value
+
+3) Provide the path of downloads from above
+        file://<path>/downloads for all projects
+
+4) Save the configurations to use the download mirrors
+
+5) Verify the changes in build/conf/plnxtool.conf
+6) petalinux-build
 ******************************************************************************************
 ******************************************************************************************
-安装后各快捷方式指向的程序以及source之后的指令
+安装后各桌面快捷方式指向的程序以及source之后的指令
 
 docnav
 Name=Documentation Navigator
@@ -52,6 +87,14 @@ Name=Xilinx Vitis 2021.2
 Exec=/home/sener/Softwares/xilinx/Vitis/2021.2/bin/vitis 
 ******************************************************************************************
 ******************************************************************************************
+petalinux_build 注意事项
+1. 必须科学上网
+2. 即使提前将downloads和sstate-cache下载下来，在过程中也仍使用到了wget和git下载文件，wget和git的代理需要单独设置，与系统代理不同
+3. gitsm的URL fetch失败的问题解决方案
+    (1) gitsm://改成git://
+    将gitsm改成git之后也出现了后续的问题，原因是直接git会导致子模块（submodule ）下载不完全，所以无法生成需要的ui/input-keymap***等文件，需要加--recurse-submodules后缀，但是直接改build的代码有点不好操作，所以可以单独下载，复制到制定位置之后，要打上补丁patch -p0 <  ***.patch，重新build。。若由于服务器证书问题仍无法下载则使用export GIT_SSL_NO_VERIFY=1 或 git config --global http.sslverify false关闭安全认证，记得下载完毕重新打开。由于下载失败，所以从本地downloads文件夹中的复制的操作也出了问题，所以需要手动将本地downloads中git2中的文件复制到build/downloads/git2中，不知道是只需要一部分还是全部，索性全复制
+    (2) 网上说法是由于python2.7.5的安装问题有相关的下载模块出问题，所以无法下载，重新安装python2.7.5即可
+    没试过行不行，单纯记录至此
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************

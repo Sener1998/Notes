@@ -46,10 +46,430 @@ if(0 == pid)
 init进程是系统启动后的第一个进程
 ******************************************************************************************
 ******************************************************************************************
-******************************************************************************************
-******************************************************************************************
-******************************************************************************************
-******************************************************************************************
+//多线程
+1 线程依附于进程(1个进程可以创建多个线程)
+2 进程结束，线程也结束
+3 线程是用来解决多个任务同时运行的问题
+
+如何创建子线程（在进程中创建线程）
+#include <pthread.h>
+
+int pthread_create(pthread_t *thread, pthread_arrt_t *attr, void *(*start_routine)(void *), void *arg);
+功能: 新建一个线程
+参数: thread [出参]  当创建线程时，linux系统会给thread写入一个值(线程id) 
+      attr   [入参]  创建线程时，给线程指定的属性  (一般填入 NULL, 表示属性是默认的)
+      start_routine   当创建线程时，线程执行的函数
+      arg   类型 void *,   为start_routine 传递的参数
+
+void *(*start_routine)(void *)  ----> start_routine 是一个函数指针，指向的函数返回void *， 参数是void *
+
+创建一个线程实例：
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+void *fun(void *p)
+{
+	while(1)	//无限循环
+	{
+		printf("thread is running\n");
+		sleep(1);
+	}
+}
+int main()
+{
+	pthread_t id;
+	pthread_create(&id, NULL, fun, NULL);
+	while(1)	//无限循环
+	{
+		printf("main is running\n");
+		sleep(1);
+	}
+}
+
+编译多线程程序注意的地方//////gcc hello.c -lpthread
+-lpthread  -l 表示指定第三方库的名称， pthread 库，全称 libpthread.so
+多线程并不是 linux的自带的库，是一个第三方库，就需要用-l 指定
+
+
+/////////////////////////////
+pthread_join();    ///函数功能：主进程如果执行到此函数，将阻塞，等待子线程结束
+
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+void *fun1(void *p)
+{
+	while(1)	//无限循环
+	{
+		printf("1 is running\n");
+		sleep(1);
+	}
+}
+void *fun2(void *p)
+{
+	while(1)	//无限循环
+	{
+		printf("2 is running\n");
+		sleep(1);
+	}
+}
+int main()
+{
+	pthread_t id1, id2;
+	pthread_create(&id1, NULL, fun1, NULL);
+	pthread_create(&id2, NULL, fun2, NULL);
+	pthread_join(id1, NULL);
+}
+
+线程参数
+
+//////////////实例：传递字符串给线程/////////////////////
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+void *fun(void *p)
+{
+	while(1)	//无限循环
+	{
+		printf("%s\n", (char *)p);	//(char *)p 强制类型转换
+		sleep(1);
+	}
+}
+int main()
+{
+	pthread_t id;
+	char *s1 = "hello hello hello";
+	pthread_create(&id, NULL, fun, s1);
+	while(1)	//无限循环
+	{
+		printf("main is running\n");
+		sleep(1);
+	}
+}
+void *  无类型指针，可以定义 和 赋值，但不可以 *p,  p++, p--
+
+//////////////实例：传递整形变量给线程/////////////////////
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+void *fun(void *p)	//void * 接收任意类型的指针，
+{
+	int *q = p;
+	while(1)	//无限循环
+	{
+		printf("a is %d\n", *q);	//*(int *)p
+		sleep(1);
+	}
+}
+int main()
+{
+	pthread_t id;
+	int a = 100;
+	pthread_create(&id, NULL, fun, &a);
+	while(1)	//无限循环
+	{
+		printf("main is running\n");
+		sleep(1);
+	}
+}
+------------------------------------------------------------------------------------------
+//////线程同步(mutex)
+//////互斥锁，用来解决共享资源同步的问题，
+1 创建互斥锁(互斥锁初始化)
+pthread_mutex_t mutex;		//定义互斥锁， mutex 互斥锁
+pthread_mutex_init(&mutex, NULL);		//初始化互斥锁
+
+2 加锁
+pthread_mutex_lock(&mutex);	//加锁，如果现在没有线程已经加锁，那么加锁成功，使用共享资源
+				//如果有线程正在使用锁，那么加速失败，阻塞等待
+3 解锁
+pthread_mutex_unlock(&mutex);	//如果有任务正在等待解锁，那么此任务 从阻塞态变成 就绪态
+
+#include <stdio.h>
+#include <pthread.h>
+pthread_mutex_t mutex;		//定义互斥锁， mutex 互斥锁
+int a[10] = { 0 };      ///共享资源
+int i;
+void *fun1()
+{
+	while(1)
+	{
+		int i;
+		pthread_mutex_lock(&mutex);	//使用前 加锁
+		for(i = 0; i < 10; i++)
+			a[i] = i;	//a 0,1,2,3,4,5,6,7,8,9
+		sleep(2);
+		for(i = 0; i < 10; i++)
+			printf("a[%d] is %d\n", i, a[i]);		
+		pthread_mutex_unlock(&mutex);	//使用完，解锁
+		sleep(1);
+	}
+}
+void *fun2()
+{
+	while(1)
+	{
+		sleep(1);
+		pthread_mutex_lock(&mutex);	//使用前 加锁
+		for(i = 0; i < 10; i++)
+			a[i] = 1;
+		for(i = 0; i < 10; i++)
+			printf("a[%d] is %d\n", i, a[i]);
+		pthread_mutex_unlock(&mutex);	//使用完，解锁
+	}
+}
+int main()
+{
+	pthread_t id1, id2;
+	pthread_mutex_init(&mutex, NULL);		//初始化互斥锁
+	pthread_create(&id1, NULL, fun1, NULL);
+	pthread_create(&id2, NULL, fun2, NULL);
+	pthread_join(id1, NULL);
+}
+------------------------------------------------------------------------------------------
+信号量  (semaphore 简写   sem)
+同样可以解决共享资源互斥和同步的问题
+
+信号量可以控制多个共享资源
+#include <semaphore.h>
+sem_t sem;		//定义一个信号量
+
+1 创建信号量(初始化信号量)
+int sem_init(sem_t *sem, int pshared, unsigned int value);
+参数:
+	sem[出参]  当创建信号量成功之后，会将信息填入sem变量中
+	pshared  通常为0， 表示多线程之间使用信号量
+	value    共享资源个数
+sem_init(&sem, 0, 3);	//拥有3个共享资源
+sem_init(&sem, 0, 1);	//拥有1个共享资源, 就相当于互斥锁
+sem_init(&sem, 0, 0);	//共享资源个数是0，也可以，此种情况主要用于同步
+
+2 请求信号量
+sem_wait(&sem);		//如果共享资源个数 >0, 那么请求成功，共享资源个数-1
+			//如果共享资源个数 = 0， 那么请求失败，阻塞等待
+3 释放信号量
+sem_post(&sem);		//释放信号量，同时将共享资源个数 +1, wait的线程解除阻塞
+ 
+四个线程共享3个信号量 实例
+sem_t sem;
+sem_init(&sem, 0, 3);	//拥有3个共享资源
+线程A请求信号量
+	sem_wait(&sem);	//请求成功，个数 -1  = 2
+线程B请求信号量
+	sem_wait(&sem);	//请求成功，个数 -1  = 1
+线程C请求信号量
+	sem_wait(&sem);	//请求成功，个数 -1  = 0
+线程D请求信号量
+	sem_wait(&sem);	//请求失败，阻塞等待
+#include <stdio.h>
+#include <pthread.h>
+#include <semaphore.h>
+sem_t sem;	//定义信号量
+
+int a[10] = { 0 };      ///共享资源
+int i;
+void *fun1()
+{
+	while(1)
+	{
+		int i;
+		sem_wait(&sem);
+		for(i = 0; i < 10; i++)
+			a[i] = i;	//a 0,1,2,3,4,5,6,7,8,9
+		sleep(2);
+		for(i = 0; i < 10; i++)
+			printf("a[%d] is %d\n", i, a[i]);		
+		sem_post(&sem);	
+		sleep(1);
+	}
+}
+void *fun2()
+{
+	while(1)
+	{
+		sleep(1);
+		sem_wait(&sem);		//请求信号量
+		for(i = 0; i < 10; i++)
+			a[i] = 1;
+		for(i = 0; i < 10; i++)
+			printf("a[%d] is %d\n", i, a[i]);
+		sem_post(&sem);		//释放信号量
+	}
+}
+int main()
+{
+	pthread_t id1, id2;
+	sem_init(&sem, 0, 1);	//拥有1个共享资源	
+	pthread_create(&id1, NULL, fun1, NULL);
+	pthread_create(&id2, NULL, fun2, NULL);
+	pthread_join(id1, NULL);
+}
+同步:
+两个任务一定按照指定顺序执行
+同步
+ABABABABABABABABA
+不同步
+ABBAABABABAB
+
+思路: 
+1) 创建一个信号量，共享资源个数0
+2) 显示任务(Y)， 运行就请求信号量，请求失败，等待
+3) 解码任务(M), 一旦解码完成，就释放(发送)信号量， 显示任务被激活，显示
+
+///////////
+练习   funY线程的运行由funM决定(funM通知funY运行)
+M
+Y
+M
+Y
+M
+Y
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <semaphore.h>
+sem_t sem;	//定义信号量
+void *funM(void *p)
+{
+	while(1)	//无限循环
+	{
+		printf("M\n");	
+		sem_post(&sem);		//释放信号量
+		sleep(1);
+	}
+}
+void *funY(void *p)
+{
+	while(1)	//无限循环
+	{
+		sem_wait(&sem);		//请求信号量， 因为个数为0，所以阻塞等待
+		printf("Y\n");	
+	}
+}
+int main()
+{
+	pthread_t id;
+	sem_init(&sem, 0, 0);	//拥有0个共享资源, 主要用于同步
+	pthread_create(&id, NULL, funM, NULL);
+	pthread_create(&id, NULL, funY, NULL);
+	pthread_join(id, NULL);
+}
+------------------------------------------------------------------------------------------
+ctrl + z   将一个进程暂停
+如果继续运行
+fg 1
+jobs   列出所有被暂停的进程
+
+kill -l
+ 1) SIGHUP	 2) SIGINT	 	3) SIGQUIT	4) SIGILL   	5) SIGTRAP
+ 6) SIGABRT	 7) SIGBUS	8) SIGFPE	 	9) SIGKILL		10) SIGUSR1
+11) SIGSEGV	12) SIGUSR2	13) SIGPIPE	14) SIGALRM	15) SIGTERM
+16) SIGSTKFLT	17) SIGCHLD	18) SIGCONT	19) SIGSTOP	20) SIGTSTP
+21) SIGTTIN	22) SIGTTOU	23) SIGURG	24) SIGXCPU	25) SIGXFSZ
+26) SIGVTALRM	27) SIGPROF	28) SIGWINCH	29) SIGIO   	30) SIGPWR
+31) SIGSYS	34) SIGRTMIN	35) SIGRTMIN+1	36) SIGRTMIN+2	37) SIGRTMIN+3
+38) SIGRTMIN+4	39) SIGRTMIN+5	40) SIGRTMIN+6	41) SIGRTMIN+7	42) SIGRTMIN+8
+43) SIGRTMIN+9	44) SIGRTMIN+10	45) SIGRTMIN+11	46) SIGRTMIN+12	47) SIGRTMIN+13
+48) SIGRTMIN+14	49) SIGRTMIN+15	50) SIGRTMAX-14	51) SIGRTMAX-13	52) SIGRTMAX-12
+53) SIGRTMAX-11	54) SIGRTMAX-10	55) SIGRTMAX-9	56) SIGRTMAX-8	57) SIGRTMAX-7
+58) SIGRTMAX-6	59) SIGRTMAX-5	60) SIGRTMAX-4	61) SIGRTMAX-3	62) SIGRTMAX-2
+63) SIGRTMAX-1	64) SIGRTMAX	
+
+2)  SIGINT   (ctrl + c)     默认操作 结束进程
+3)  SIGQUIT  (ctrl + \)     默认操作 结束进程
+20) SIGTSTP  (ctrl + z)
+14) SIGALRM  (定时器信号，定时时间到，linux系统会自动发送此信号)  默认操作 忽略
+9) SIGKILL   (此信号就用来结束某个进程)      kill -9 11111   默认操作 结束进程，并且不可以忽略
+------------------------------------------------------------------------------------------
+信号（多进程之间的一种通信方式）
+信号有三种处理方式
+1) 忽略信号
+2) 捕获信号
+3) 执行默认操作
+
+如何捕获信号
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+void fun(int nu)
+{
+	printf("receive sinal ctrl + c\n");
+	exit(0);	//exit 函数可以结束进程
+}
+int main()
+{
+	signal(SIGINT, fun);	//能向系统注册一个函数fun，当产生SIGINT信号时，自动执行fun
+	while(1);
+}
+
+练习：当用户在键盘上输入Ctrl + \ 时，会收到SIGQUIT信号，我们写程序，捕获到这个信号，并打印信号值
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+void fun(int nu)
+{
+	printf("receive sinal %d\n", nu);
+	exit(0);	//exit 函数可以结束进程
+}
+int main()
+{
+	signal(SIGQUIT, fun);	//能向系统注册一个函数fun，当产生SIGQUIT信号时，自动执行fun
+	while(1);
+}
+
+signal(SIGQUIT, SIG_IGN);   //SIG_IGN 忽略信号
+
+如何发送信号（一个进程给另一个进程发送信号）
+kill 函数
+int kill(pid_t pid, int sig);
+参数: pid  进程的pid值
+      sig  信号值
+
+kill(11111, 9);			//给11111 进程发送信号9(SIGKILL)
+kill(11111, 2);			//给11111 进程发送信号2(ctrl + c)
+
+#include <stdio.h>
+int main()
+{
+	kill(11111, 2);
+}
+
+//练习：有两个进程，一个进程接收SIGINT信号，收到后将信号编号打印出来，
+                    另一个进程负责发送SIGINT信号给那个进程，
+      要求第二进程(发送SIGINT信号的进程)，进程ID号不写固定值，信号值不写固定值
+./a   
+myid is ....
+
+./b 11111 2      ////////进程pid号和信号值都由参数传递给程序
+"11111"   可以用atoi, 将字符串转换成int      int pid = atoi("11111");
+
+///发信号进程
+#include <signal.h>
+#include <stdio.h>
+int main(int argc, char *argv[])
+{
+	if(argc < 3)
+	{
+		printf("param error, like this ./send 11111 2\n");
+		return 0;
+	}
+	kill(atoi(argv[1]), atoi(argv[2]));
+}
+////收信号进程
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+void fun(int nu)
+{
+	printf("receive signal %d\n", nu);
+	exit(0);
+}
+int main()
+{
+	printf("myid is %d\n", getpid());
+	signal(SIGINT, fun);
+	while(1);
+}
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
