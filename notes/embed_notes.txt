@@ -63,6 +63,180 @@ STM32F407 STM32F429
 主要跑FreeRTOS   uCos
 ******************************************************************************************
 ******************************************************************************************
+嵌入式教程笔记——linux内核及交叉编译
+
+linux系统构建
+1) 开发板介绍
+	三星 exynos4412 系列处理
+	基于Cortex A9的处理器 (民用设备)
+	exynos 4412  1.5GHz  4核处理器
+	2G  RAM
+	8G  flash
+	核心板 + 外设板
+
+2) 开发板使用及启动流程
+	putty.exe   终端(可以在windows 上显示并控制开发板)    windows 超级终端
+	配置串口  serial
+	波特率 115200
+
+	先启动uboot  然后导入kernel并执行，接下来执行rootfs
+
+	uboot 可以使用 help命令 查看帮助
+
+	kernel 完全可以使用linux的命令
+
+3) 交叉编译环境安装 及 测试
+	gcc 是基于 x86 cpu的， 但是编译的程序不能在开发板上运行(因为开发板基于ARM cpu的)
+
+linux@ubuntu:~$ file hello
+hello: ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.24, BuildID[sha1]=0xd51ca3f9d47715852fa8604fcd817186398d5a5f, not stripped
+
+	所以 有两个方法
+	1) 在ubuntu上安装交叉编译环境 (ubuntu上编译，开发板上运行)
+	2) 开发板上安装gcc ， 直接在开发板上编译
+
+	需要安装交叉编译工具链
+	cd ~
+	mkdir toolchain
+	cp gcc-4.6.4.tar.xz toolchain    
+	cd toolchain
+	tar xvf gcc-4.6.4.tar.xz   
+		tar 压缩解压命令
+		x   解压
+		v   显示压缩过程
+		f   将多个文件打包放到一个文件中
+	sudo gedit /etc/bash.bashrc      
+		sudo 切换到管理员权限执行 (/etc目录下的文件，普通用户无法修改) 
+		gedit  文本编辑器
+		/etc/bash.bashrc       终端的配置文件
+
+	export PATH=$PATH:/home/linux/toolchain/gcc-4.6.4/bin 
+		export   设置环境变量
+		PATH     记录了可执行文件的搜索路径的 环境变量 
+		PATH目录中有 arm-none-linux-gnueabi-gcc 命令
+	source /etc/bash.bashrc
+		重启配置
+	arm-none-linux-gnueabi-gcc -v    (-v查看版本号)
+		测试交叉编译工具是否安装成功
+程序测试	
+	arm-none-linux-gnueabi-gcc hello.c -o hello1
+	file hello1
+	hello1: ELF 32-bit LSB executable, ARM, version 1 (SYSV), dynamically linked (uses shared libs), for GNU/Linux 2.6.38, not stripped
+
+4) tftp环境测试  
+	tftp (一个简易的tfp服务， 一个简易的文件共享服务，主要用于嵌入式开发板中)
+目标: 将hello1 下载到开发板中执行
+	1) 配置 ubuntu为桥接模式，并手动配置ip地址  (不用做)
+		桥接模式:  虚拟交换机(wmware 模拟了一个交换机)
+		NAT模式:   windows 和 linux共用网卡 (虚拟机只能访问windows，无法访问其他主机)
+		sudo ifconfig eth0 192.168.3.111
+		sudo   切换到管理员
+		ifconfig  查看或者配置 ip地址
+		eth0   第一个以太网卡
+		192.168.3.111		ip地址
+	2) 给windows配ip地址 (tftp服务 在windows上)
+		不可以自动分配
+		手动配置为  192.168.3.111
+	3) 配置开发板ip地址
+		ifconfig eth0 192.168.3.110
+		ping 192.168.3.111	或者 在 ubuntu上ping 开发板 192.168.3.110
+	4) 启动tftpserver (确保防火墙关闭)
+		tftpd---> configure--->设置共享目录
+		tftpd---> start
+		将 hello1 放到 tftp共享目录中
+	5) 在开发板上执行
+		tftp -g -r hello1 192.168.3.111
+		chmod +x hello1		//给hello1 增加可执行权限
+		./hello1
+5 还原开发板 (用原始的镜像文件 还原开发板)
+实验 二.2、从EMMC 加载内核和文件系统
+	EMMC (flash的标准接口  可以认为 EMMC就是flash)
+
+	uImage  linux内核	
+	ramdisk.img   根文件系统 (被加载到内存中执行)
+	exynos4412-fs4412.dtb  设备树文件
+	u-boot-fs4412.bin  bootloader
+	1) 将 镜像文件 从 tftp共享文件夹中，下载到 flash中 (uboot通过以太网卡下载)
+		(1) 将uImage、ramdisk.img、exynos4412-fs4412.dtb拷贝到tftpshare文件夹中
+		(2) 在uboot中配置 自己的ip地址 和 tftp服务器ip地址
+		setenv serverip 192.168.3.111    (tftp服务器ip地址)
+		setenv ipaddr 192.168.3.110      (自己的ip地址)
+		saveenv                
+		setenv 设置环境变量
+		saveenv 保存环境变量
+		pri  (print  printev)    打印环境变量值
+		(3) 将uImage 从 tftp共享文件夹中下载到开发板内存中
+		tftp 41000000 uImage		
+			tftp  下载命令
+			41000000 内存地址
+		movi write kernel 41000000
+			movi wrtie 写flash
+			kernel  是flash的kernel 分区
+			41000000 是刚才的内存地址(里面保存了uImage)
+		(4)  烧写设备树文件到EMMC 上
+		tftp 41000000 exynos4412-fs4412.dtb
+		movi write dtb 41000000		//dtb 设备树分区
+		(5)  烧写文件系统镜像到EMMC 上
+		tftp 41000000 ramdisk.img
+		movi write rootfs 41000000 300000     //根文件系统分区
+			//保存环境变量
+	2) 配置开发板从 flash启动	
+		(1) 设置启动参数		
+		setenv bootcmd movi read kernel 41000000\;movi read dtb 42000000\;movi read rootfs 43000000 300000\;bootm 41000000 43000000 42000000
+		bootcmd 启动命令
+		movi read kernel 41000000		//读kernel 到内存中
+		movi read dtb 42000000                  //读设备树到 42000000
+		bootm 41000000 43000000 42000000	//启动内核 在 41000000 42000000 43000000
+		(2) saveenv	
+
+5 linux 内核移植 (linux 内核裁剪       linux 内核构建)
+	目标: 制作一个微内核linux系统 ， 运行在4412 开发板上
+	1) 到官方网站下载一个 linux内核源码(www.kernel.org)
+		第三天/源码/linux-3.14.tar.xz
+	2) 拷贝到ubuntu系统中，并解压
+		tar xvf linux-3.14.tar.xz
+	3) 进入linux内核源码目录
+		cd linux-3.14
+	4) 修改Makefile  
+		修改CPU 体系结构 ARM
+		修改交叉编译工具链名称
+		vim Makefile             198行
+		修改：
+		ARCH ?= $(SUBARCH)                                   
+		CROSS_COMPILE ?= $(CONFIG_CROSS_COMPILE:"%"=%)
+		为：
+		ARCH ?= arm
+		CROSS_COMPILE ?= arm-none-linux-gnueabi-
+	5) 导入默认配置 (exynos_deconfig 是一个配置文件 )
+		make exynos_defconfig
+		实际: cp arch/arm/configs/exynos_defconfig .config
+	6) 配置内核
+		make menuconfig
+	7) 编译内核
+		make uImage
+	8) 需要mkimage工具
+		sudo cp ~/mkimage /bin
+		sudo chmod +x /bin/mkimage 
+	9) 重新生成一个设备树  (硬件相关的配置文件)
+		cp arch/arm/boot/dts/exynos4412-origen.dts arch/arm/boot/dts/exynos4412-fs4412.dts
+	10) 修改设备树相关Makefile
+		vim arch/arm/boot/dts/Makefile	
+		在
+		exynos4412-origen.dtb \
+		下添加如下内容
+		exynos4412-fs4412.dtb \
+	11) 编译设备树
+		make dtbs
+	12) 重新下载新的 uImage  和 exynos4412-fs4412.dtb ， 验证新的内核是否好用
+		ifconfig eth0 192.168.3.110 出错，说明是的内核 (因为网卡还没移植)  
+		
+6   网卡驱动移植
+	1) linux内核中已经有 网卡驱动 和 网络协议栈, 我们只需配置即可	
+	网卡驱动  D:\linux-3.14-OK.bak\drivers\net\ethernet\davicom\dm9000.c
+	网络协议栈   D:\linux-3.14-OK.bak\net\ipv4\
+
+	2) 配置网卡
+		make menuconfig
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
