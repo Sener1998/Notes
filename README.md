@@ -14,6 +14,7 @@
 10. C------C/C++
 11. VLSI
 12. xilinx------vitis/vivado/petalinux
+13. kdl------orocos_kdl
 
 # Commands
 1. Anaconda
