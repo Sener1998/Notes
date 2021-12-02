@@ -56,7 +56,7 @@ Vector v4 = Vector::Zero(); //All values are set to zero
 创建一个求解器，这里是链的正运动学位置求解器ChainFkSolverPos_recursive，调用JntToCart
 virtual int JntToCart(const JntArray& q_in, Frame& p_out, int segmentNr=-1);
 virtual int JntToCart(const JntArray& q_in, std::vector<Frame>& p_out, int segmentNr=-1);
-我对segmentNr的理解是迭代层次，-1就是直接干到最底层，否则就是指定层数，得到的最末端的连杆末端相对第一个连杆的frame_ref的姿态矩阵赋给p_out
+我对segmentNr的理解是计算到第几个连杆末端，-1就是直接干到最底层，否则就是指定数量的连杆，得到的最末端的连杆末端相对第一个连杆的frame_ref的姿态矩阵赋给p_out
 ******************************************************************************************
 ******************************************************************************************
 Forward kinematic chain example
@@ -356,6 +356,44 @@ eig.eigenvectors();               // vec
 // For self-adjoint matrices use SelfAdjointEigenSolver<>
 ******************************************************************************************
 ******************************************************************************************
+KDL::Trajectory_composite
+
+其中vt是一系列轨迹点的向量，轨迹点Trajectory里面记录了一个笛卡尔空间中的点的位置(Pos)、速度(Vel)、加速度(Acc)
+最有意思的是duration，在往Trajectory_Composite中添加Trajectory时，会将该笛卡尔空间中的点在总轨迹上的时间设置为原总轨迹的总时间加上duration
+也就是duration描述的是在duration时间后到达该点(Pos, Vel, Acc)
+在通过Pos(time)、Vel(time)、Acc(time)函数获取轨迹点的时候，当所输入的时间在轨迹中的某两个时间点之间，则返回小于输入时间的那个时间的轨迹点信息，其他情况则返回0时间或最后一个时间的轨迹点信息
+看代码的时候发现vd添加第一个点的时候，vd插入了其duration，可见第一个时间点的duration应该设置为0
+
+namespace KDL {
+class Trajectory_Composite: public Trajectory
+        {
+                typedef std::vector<Trajectory*> VectorTraj;
+                typedef std::vector<double>         VectorDouble;
+                VectorTraj vt;      // contains the element Trajectories
+                VectorDouble  vd;      // contains end time for each Trajectory
+                double duration;    // total duration of the composed
+                                    // Trajectory
+
+        public:
+                Trajectory_Composite();
+                // Constructs an empty composite
+
+                virtual double Duration() const;
+                virtual Frame Pos(double time) const;
+                virtual Twist Vel(double time) const;
+                virtual Twist Acc(double time) const;
+
+                virtual void Add(Trajectory* elem);
+                // Adds trajectory <elem> to the end of the sequence.
+
+                virtual void Destroy();
+                virtual void Write(std::ostream& os) const;
+                virtual Trajectory* Clone() const;
+
+                virtual ~Trajectory_Composite();
+        };
+}
+
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************

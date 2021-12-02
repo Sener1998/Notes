@@ -15,6 +15,7 @@
 11. VLSI
 12. xilinx------vitis/vivado/petalinux
 13. kdl------orocos_kdl
+14. cmd------windows cmd/powershell
 
 # Commands
 1. Anaconda
