@@ -7,3 +7,8 @@
 c	新建窗口
 n	切换窗口
 x	关闭会话
+
+
+
+显示颜色  .tmux.conf中添加
+	set -g default-terminal "screen-256color"
