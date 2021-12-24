@@ -90,13 +90,31 @@ Exec=/home/sener/Softwares/xilinx/Vitis/2021.2/bin/vitis
 petalinux_build 注意事项
 1. 必须科学上网
 2. 即使提前将downloads和sstate-cache下载下来，在过程中也仍使用到了wget和git下载文件，wget和git的代理需要单独设置，与系统代理不同
-3. gitsm的URL fetch失败的问题解决方案
+3. gitsm的URL fetch失败的问题解决方案，下面两个方法都可行
     (1) gitsm://改成git://
     将gitsm改成git之后也出现了后续的问题，原因是直接git会导致子模块（submodule ）下载不完全，所以无法生成需要的ui/input-keymap***等文件，需要加--recurse-submodules后缀，但是直接改build的代码有点不好操作，所以可以单独下载，复制到制定位置之后，要打上补丁patch -p0 <  ***.patch，重新build。。若由于服务器证书问题仍无法下载则使用export GIT_SSL_NO_VERIFY=1 或 git config --global http.sslverify false关闭安全认证，记得下载完毕重新打开。由于下载失败，所以从本地downloads文件夹中的复制的操作也出了问题，所以需要手动将本地downloads中git2中的文件复制到build/downloads/git2中，不知道是只需要一部分还是全部，索性全复制
-    (2) 网上说法是由于python2.7.5的安装问题有相关的下载模块出问题，所以无法下载，重新安装python2.7.5即可
-    没试过行不行，单纯记录至此
+    (2) 将系统默认python切换至python2
+    ubuntu 18.04自带python2.7.15、python3.6、python3.6m，但没有指定python指定哪个版本。使用update-alternative添加，然后切换至python2.7即可
+    update-alternatives --install /usr/bin/python python /usr/bin/python2.7 1   这一步会创建一个软连接/usr/bin/python
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.6 2
+    update-alternatives --install /usr/bin/python python /usr/bin/python3.6m 3
+    默认是使用最高优先级的选项（3.6m），切换至2.7
+    update-alternatives --config python
+    若想删除掉某个版本
+    update-alternatives --remove python /usr/bin/python2.7
+    不太可能一次成功，要多试几次才能完整下完
 ******************************************************************************************
 ******************************************************************************************
+vivado 设备初始化一般流程：
+先使用函数搜索预设配置文件，然后初始化
+XXXX_LookupConfig()
+XXXX_CfgInitialize()
+或者一步到位
+XXXX_Initialize()
+这个函数内部就是调用了XXXX_LookupConfig()和XXXX_CfgInitialize()
+
+XGpio_Initialize()        这个有
+XGpioPs_Initialize()    但这个没有
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************

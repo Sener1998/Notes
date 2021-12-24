@@ -176,6 +176,8 @@ REMOTE=${REMOTE:-https://gitee.com/${REPO}.git}
 cd ~/.oh-my-zsh
 git remote set-url origin https://gitee.com/mirrors/oh-my-zsh.git
 git pull
+
+但其实直接下载后运行install.sh就行
 ------------------------------------------------------------------------------------------
 chsh -s /usr/bin/zsh
 reboot
@@ -185,6 +187,35 @@ git 大神教程
 https://zhuanlan.zhihu.com/p/30044692
 ******************************************************************************************
 ******************************************************************************************
+使用igh 实现EtherCAT主站
+------------------------------------------------------------------------------------------
+前戏   注意README里面是有问题的
+git clone https://gitlab.com/etherlab.org/ethercat.git
+git checkout stable-1.5
+
+./bootstrap
+去掉额外的加补丁的驱动，使用默认驱动，其实主要是8139too，这个需要实时补丁的支持，内核打了实时补丁就不用去掉
+./configure --enable-generic --disable-e100 --disable-8139too --disable-e1000 --disable-r8169
+或者
+./configure --enable-8139too=no --enable-wildcards=yes （最后用的这个，但这两个应该都行）
+
+sudo make
+sudo make modules
+sudo make install
+sudo make modules_install
+sudo depmod 检查依赖关系
+
+{PREFIX}默认是/usr/local，在配置的时候可以改成其他的地方，但是没必要
+ln -s ${PREFIX}/etc/init.d/ethercat /etc/init.d/ethercat
+cp ${PREFIX}/etc/sysconfig/ethercat /etc/sysconfig/ethercat
+修改配置文件
+在MASTER0_DEVICE=""填写以太网卡的MAC地址，DEVICE_MODULES="generic"
+vim /etc/sysconfig/ethercat
+或者先修改再复制
+
+
+------------------------------------------------------------------------------------------
+
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
