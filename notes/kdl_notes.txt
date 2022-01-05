@@ -399,11 +399,35 @@ class Trajectory_Composite: public Trajectory
 }
 ******************************************************************************************
 ******************************************************************************************
-KDL::Path
+所以对于同一个旋转矩阵使用Eigen库和KDL的数值是可能不一样的，但是通过相同的转换函数转换成旋转矩阵是一样的
+使用的时候注意都转换成旋转矩阵，然后使用同一个库的函数计算
 
+Eigen::Matrix3d t;
+t << 0.9063, -0.4226, 0, -0.4226, -0.9063, 0, 0, 0, -1;
 
+Eigen::Vector3d t_ea = t.eulerAngles(2,1,0); // z y x -> Yaw Pitch Roll
+Rotation r_kdl = Rotation::RPY(t_ea[2] ,t_ea[1],t_ea[0]);
+std::cout << "t = \n" << t << std::endl;
+std::cout << "r_kdl = \n" << r_kdl << std::endl;
+
+Eigen::Vector3d t_ea_1, t_ea_2;
+t_ea_1.fill(0);
+t_ea_2.fill(0);
+
+r_kdl.GetRPY(t_ea_1[2] ,t_ea_1[1],t_ea_1[0]);
+std::cout << "t_ea = \n" << t_ea[2] << ", " << t_ea[1] << ", " << t_ea[0] << std::endl;
+std::cout << "t_ea_1 = \n" << t_ea_1[2] << ", " << t_ea_1[1] << ", " << t_ea_1[0] << std::endl;
+
+Rotation r_kdl_1 = Rotation::RPY(t_ea[2] ,t_ea[1],t_ea[0]);
+std::cout << "r_kdl_1 = \n" << r_kdl_1 << std::endl;
 ******************************************************************************************
 ******************************************************************************************
+四元数与旋转矩阵转换
+Rotation r = Rotation::RotZ(0.5*M_PI);
+Eigen::Quaterniond test;
+r.GetQuaternion(test.coeffs()[0], test.coeffs()[1], test.coeffs()[2], test.coeffs()[3]);
+Rotation r1;
+r1 = Rotation::Quaternion(test.coeffs()[0], test.coeffs()[1], test.coeffs()[2], test.coeffs()[3]);
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
