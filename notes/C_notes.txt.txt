@@ -472,6 +472,184 @@ int main()
 }
 ******************************************************************************************
 ******************************************************************************************
+std的函数及变量
+------------------------------------------------------------------------------------------
+1. std::stringstream
+
+用于格式转换或长字符串拼接
+例子1：
+  std::stringstream m_sstream;
+  std::string result;
+  int i=1000;
+  m_sstream<<i;
+  m_sstream>>result;
+  std::cout<<result<<"\n";
+例子2：
+std::string to_string() const {
+        std::stringstream ss;
+        ss << "\ninp.current_position = [" << join(current_position) << "]\n";
+        ss << "inp.current_velocity = [" << join(current_velocity) << "]\n";
+        ss << "inp.current_acceleration = [" << join(current_acceleration) << "]\n";
+        ss << "inp.target_position = [" << join(target_position) << "]\n";
+        ss << "inp.target_velocity = [" << join(target_velocity) << "]\n";
+        ss << "inp.target_acceleration = [" << join(target_acceleration) << "]\n";
+        ss << "inp.max_velocity = [" << join(max_velocity) << "]\n";
+        ss << "inp.max_acceleration = [" << join(max_acceleration) << "]\n";
+        ss << "inp.max_jerk = [" << join(max_jerk) << "]\n";
+        if (min_velocity) {
+            ss << "inp.min_velocity = [" << join(min_velocity.value()) << "]\n";
+        }
+        if (min_acceleration) {
+            ss << "inp.min_acceleration = [" << join(min_acceleration.value()) << "]\n";
+        }
+        if (!intermediate_positions.empty()) {
+            ss << "inp.intermediate_positions = [\n";
+            for (auto p: intermediate_positions) {
+                ss << "    [" << join(p) << "],\n";
+            }
+            ss << "]\n";
+        }
+        return ss.str();
+    }
+------------------------------------------------------------------------------------------
+2. std::chrono
+
+C++11 中提供了一个计时的标准库 <chrono>;
+里面有三种时钟 clock: steady_clock， system_clock 和 high_resolution_clock;
+区别
+    steady_clock 是单调的时钟，相当于教练手中的秒表；只会增长，适合用于记录程序耗时；
+    system_clock 是系统的时钟；因为系统的时钟可以修改；甚至可以网络对时； 所以用系统时间计算时间差可能不准。
+    high_resolution_clock 是当前系统能够提供的最高精度的时钟；它也是不可以修改的。相当于 steady_clock 的高精度版本。
+
+例子1
+一个用来测试代码段运行时间的宏
+    #include <chrono>
+     
+    #define TIMERSTART(tag) auto tag##_start = std::chrono::steady_clock::now(),tag##_end = tag##_start
+    #define TIMEREND(tag) tag##_end = std::chrono::steady_clock::now()
+    #define DURATION_s(tag) printf("%s costs %d s\n",#tag,std::chrono::duration_cast<std::chrono::seconds>(tag##_end - tag##_start).count())
+    #define DURATION_ms(tag) printf("%s costs %d ms\n",#tag,std::chrono::duration_cast<std::chrono::milliseconds>(tag##_end - tag##_start).count());
+    #define DURATION_us(tag) printf("%s costs %d us\n",#tag,std::chrono::duration_cast<std::chrono::microseconds>(tag##_end - tag##_start).count());
+    #define DURATION_ns(tag) printf("%s costs %d ns\n",#tag,std::chrono::duration_cast<std::chrono::nanoseconds>(tag##_end - tag##_start).count());
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+------------------------------------------------------------------------------------------
+******************************************************************************************
+******************************************************************************************
+if constexpr
+------------------------------------------------------------------------------------------
+普通的 if-else 是在执行期进行条件判断与选择, 这意味着在泛型编程中无法使用
+if-else 语句进行条件判断. 比如例 1 会引起编译错误
+例 1: 将多个数累加并返回累加结果
+template <int N, int... Ns>
+auto sum()
+{
+    if (sizeof...(Ns) == 0) // 若参数包为空, 直接返回 N
+        return N;
+    else                    // 否则进行递归调用
+        return N + sum<Ns...>();
+}
+// 调用
+sum<1, 2, 3>();
+
+C++17 之前, 必须利用多个模板才能完成例 1 的功能
+例 2: C++17 之前, 将多个数累加并返回累加结果
+// 只有一个模板参数时调用此模板
+template<int N>
+int sum()
+{
+    return N;
+}
+// 模板参数 > 2 个时调用此模板
+template <int N, int N2, int... Ns>
+int sum()
+{
+    return N + sum<N2, Ns...>();
+}
+// 调用
+sum<1, 2, 3>(); // returns 6
+
+C++17 引入 constexpr if 支持在编译期执行, 可以将之应用于泛型编程中的条件判断,如例 3.
+例 3: C++17, 将多个数累加并返回累加结果
+template <int N, int... Ns>
+auto sum()
+{
+    if constexpr (0 == sizeof...(Ns))
+        return N;
+    else
+        return N + sum<Ns...>();
+}
+// 调用
+sum<1, 2, 3>(); // returns 6
+
+更简单的是利用 C++17 提供的新功能 “折叠表达式”, 如例 4.
+例 4: 利用折叠表达式实现多个数累加并返回累加结果
+template<typename ...Ns>
+auto sum(Ns... ns) {
+    return (ns + ...);
+}
+// 调用
+sum(1, 2, 3); // returns 6
+------------------------------------------------------------------------------------------
+constexpr if 可以应用更多的场合, 比如要将数值转化为字符串. 在 C++17之前, 需要使用 std::enable_if 来判断参数类型, 如例 5
+例 5
+// 数值转换
+template<typename T>
+std::enable_if_t<std::is_integral<T>::value, std::string>
+to_string(T t)
+{
+    return std::to_string(t);
+}
+template<typename T>
+std::enable_if_t<!std::is_integral<T>::value, std::string>
+to_string(T t)
+{
+    return t;
+}
+
+而在 C++17 中可以利用 constexpr if 完成相同功能, 且摒弃了冗长的std::enable_if 语句, 不仅代码可读性好, 而且书写也更方便, 如例6
+例 6
+template<typename T>
+auto to_string(T t)
+{
+    if constexpr(std::is_integral<T>::value)
+        return std::to_string(t);
+    else
+        return t;
+}
+
+便是要注意在 constexpr if 中的 return 语句, 下面的写法是不对的, 应当在条件语句的分支中 return
+template<typename T>
+auto to_string(T t)
+{
+    if constexpr(std::is_integral<T>::value)
+        return std::to_string(t);
+    // 此处需要 else
+    return t;
+}
+------------------------------------------------------------------------------------------
+正如许多 C++ 著作中提到的, 如果一个函数中使用了大量的 if-else 语句,
+那么需要重构, 将多个条件语句转化成函数重载会更加清晰. 同理,
+如果泛型函数中使用大量的 constexpr if 语句, 也许也需要考虑代码重构.
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
