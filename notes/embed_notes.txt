@@ -244,8 +244,208 @@ ctrl+"A~Z"对应十进制数字1~26，发送时切换至发送16进制模式，�
 比如要发送ctrl+c，则切换16进制发送03，发送ctrl+z，则是发送1A
 ******************************************************************************************
 ******************************************************************************************
+EC-Master 使用
+
+1. 系统适配
+编译模块并添加到内核中
+cd Sources/atemsys
+make modules
+sudo insmod Sources/atemsys/atemsys.ko
+如果是在目标机上使用EC-Master，则需要交叉编译
+export ARCH=<…>
+export CROSS_COMPILE=<…>
+cd Sources/atemsys
+make modules KERNELDIR=<path to target kernel dir>
+
 ******************************************************************************************
-******************************************************************************************
+******************************************************************************************‘
+EcMasterDemo
+------------------------------------------------------------------------------------------
+main函数分解
+
+第一步是按照操作系统进行初始化
+/* OS specific initialization */
+//linux + 实施补丁（后面就只用linux代替了）
+    dwRes = EnableRealtimeEnvironment();
+    if (EC_E_NOERROR != dwRes)
+    {
+        goto Exit;
+    }
+    {
+        sigset_t SigSet;
+        int nSigNum = SIGALRM;
+        sigemptyset(&SigSet);
+        sigaddset(&SigSet, nSigNum);
+        sigprocmask(SIG_BLOCK, &SigSet, NULL);
+        signal(SIGINT, SignalHandler);
+        signal(SIGTERM, SignalHandler);
+    }
+首先使能实时环境
+然后安装SIGALRM信号
+这一步的意思就是将实时环境搞好，安装信号是为了后面实时操作做准备
+
+/* add hook to log all EtherCAT messages. Without hook no messages will be generated! */
+    OsAddDbgMsgHook(CAtEmLogging::OsDbgMsgHookWrapper);
+
+/* Initialize Timing Event descriptor */
+    TimingDesc.bShutdown          = EC_FALSE;
+    TimingDesc.bIsRunning         = EC_FALSE;
+    TimingDesc.dwBusCycleTimeUsec = CYCLE_TIME * 1000;
+
+/* prepare command line */
+处理执行程序时附带的一些指令，诸如-f -v......
+
+/* initialize master logging */
+处理日志的程序
+
+/* determine master configuration type */
+按照命令行的解析结果配置主站
+    if ('\0' != szENIFilename[0])
+    {
+        eCnfType     = eCnfType_Filename;
+        pbyCnfData   = (EC_T_BYTE*)&szENIFilename[0];
+        dwCnfDataLen = 256;
+    }
+    else
+    {
+#if (defined STATIC_MASTERENI_XML_DATA)
+        eCnfType     = eCnfType_Data;
+        pbyCnfData   = STATIC_MASTERENI_XML_DATA;
+        dwCnfDataLen = STATIC_MASTERENI_XML_DATA_SIZE;
+#else
+        eCnfType     = eCnfType_GenPreopENI;
+#endif
+    }
+加载eni文件，eni文件就是使用EC-Engineer扫描系统的ethercat后，根据拓扑结构和从站信息生成的配置文件
+EC-Master使用这个文件对主站继续配置
+
+/* for multi core cpus: select cpu number for this thread */
+    EC_CPUSET_ZERO( CpuSet );
+    EC_CPUSET_SET( CpuSet, dwCpuIndex );
+    if( ! OsSetThreadAffinity(EC_NULL, CpuSet) )
+    {
+       OsDbgMsg("ERROR: Set Affinity Failed!\n");
+    }
+
+/* create timing event to trigger the job task */
+    TimingDesc.pvTimingEvent = OsCreateEvent();
+    if( EC_NULL == TimingDesc.pvTimingEvent )
+    {
+        OsDbgMsg("ERROR: insufficient memory to create timing event!\n");
+        goto Exit;
+    }
+
+/* initialize auxiliary clock */
+
+/* create timing task if needed */
+
+执行demo函数
+之后检测demo函数执行结果
+
+/* stop timing task if running */
+
+/* clean up auxclk */
+
+/* delete the timing event */
+
+/* final OS layer cleanup */
+
+总结
+最开始是声明之后要用的各种变量
+然后是检测系统是否具备实时操作的条件 EnableRealtimeEnvironment()
+------------------------------------------------------------------------------------------
+ATEMDemo函数分解
+
+在main函数中的调用
+dwRes = ATEMDemo( &oLogging,
+                      eCnfType, pbyCnfData, dwCnfDataLen,
+                      TimingDesc.dwBusCycleTimeUsec, nVerbose, dwDuration,
+                      apLinkParms[0],
+                      TimingDesc.pvTimingEvent, dwCpuIndex,
+                      bEnaPerfJobs
+#if (defined ATEMRAS_SERVER)
+                      ,wServerPort
+#endif
+                      ,((2 == dwNumLinkLayer)?apLinkParms[1]:EC_NULL)
+                    );
+
+    /******************************************************/
+    /* Demo code: Remove/change this in your application  */
+    /* Initialize application                             */
+    /******************************************************/
+代码中有这个注释，意思就是，整个demo的其他部分是通用的，即使是自己编写程序也是需要的，那么最好就是直接复制工程，只修改这一部分
+demo中有多个地方有这个注释，这几部分之间夹了一些操作，具体如下
+    dwRes = myAppInit(poLog, nVerbose)； //应用初始化
+/* Start RAS server if enabled */ 可没有
+/* Initialize EtherCAT master */
+/* Create cyclic process data Thread */ 程序在这一步开线程执行tEcJobTask()
+{
+        S_pvtJobThread = OsCreateThread((EC_T_CHAR*)"tEcJobTask", tEcJobTask,
+                                        dwBusCycleTimeUsec,
+                                        JOBS_THREAD_STACKSIZE, (EC_T_VOID*)&S_DemoThreadParam);
+}
+/* Configure master */
+/* Register client */
+/* Print found slaves */
+/* Print MAC address */
+/* Start EtherCAT bus --> set Master state to OPERATIONAL if ENI file provided */
+    dwRes = myAppPrepare(poLog, nVerbose); //应用的准备工作
+/* set master and bus state to PREOP */
+/* skip this step if demo started without ENI */这里有个注释是如果不使用eni文件的话就不用管这里，但一般都是需要的
+{
+    dwRes = myAppSetup(poLog, nVerbose, S_dwClntId); //应用配置
+    /* set master and bus state to SAFEOP */
+    /* set master and bus state to OP */
+}
+/* Enabling mode switch warnings for shadowed task */
+/* run the demo */
+    myAppDiagnosis(poLog, nVerbose); //Do some diagnosis job here outside the job task 诊断用的
+后面就是标签Exit:了，前面的程序一旦出错就会跳转到这里
+/* Stop EtherCAT bus --> Set Master state to INIT */
+/* Unregister client */
+/* Shutdown tEcJobTask */
+/* Deinitialize master */
+这里查了一下Deinitialize这个单词的意思，是没有翻译的，有个论坛是这样解释的
+To release any resources that were allocated to (some object or process) as part of initialization.
+/* Stop RAS server */ 可没有
+
+从前面可以看出需要我们自己写的函数有这么几个
+tEcJobTask    //处理ethercat收发数据的程序
+
+myAppInit
+myAppWorkpd 在tEcJobTask中调用
+myAppPrepare
+myAppSetup
+
+tEcJobTask   工作函数
+函数一开始是配置CPU
+然后是一个do while语句
+do while中先是设置循环的周期，之后处理接收到的数据帧（读新的输入数据），这里会检测周期是否设置正确
+然后是一段可以自定义的代码，可以使用ecatGetProcessImageInputPtr和ecatGetProcessImageOutputPtr得到输入和输出数据帧的存储地址
+通过输入帧来修改输出帧
+接下来是这段代码
+        PERF_JOB_START(PERF_myAppWorkpd);
+        myAppWorkpd(pDemoThreadParam->pLogInst, pDemoThreadParam->pNotInst->Verbose(), ecatGetProcessImageInputPtr(), ecatGetProcessImageOutputPtr());
+        PERF_JOB_END(PERF_myAppWorkpd);
+这段代码执行myAppWorkpd，在这里有个问题，就是PERF_JOB_START和PERF_JOB_END使用的是PERF_myAppWorkpd，这个宏的值是5，那么5对应的是myAppWorkpd，
+这个5还在什么地方用了呢？在这里
+static EC_T_CHAR*          S_aszMeasInfo[MAX_JOB_NUM] =
+{
+    (EC_T_CHAR*)"JOB_ProcessAllRxFrames",
+    (EC_T_CHAR*)"JOB_SendAllCycFrames  ",
+    (EC_T_CHAR*)"JOB_MasterTimer       ",
+    (EC_T_CHAR*)"JOB_SendAcycFrames    ",
+    (EC_T_CHAR*)"Cycle Time            ",
+    (EC_T_CHAR*)"myAppWorkPd           "
+};
+S_aszMeasInfo只有PERF_MEASURE_JOBS_SHOW()这个宏使用了，这个宏的作用是显示所有的测量信息
+#define PERF_MEASURE_JOBS_SHOW()        ecatPerfMeasShow(&S_TscMeasDesc,0xFFFFFFFF,S_aszMeasInfo)
+其中S_TscMeasDesc根据名称猜测是存储了所有的测量数据，那么为什么呢？答案在这个宏里
+#define PERF_MEASURE_JOBS_INIT(msgcb)   ecatPerfMeasInit(&S_TscMeasDesc,0,MAX_JOB_NUM,msgcb);ecatPerfMeasEnable(&S_TscMeasDesc)
+初始化测量job的时候将其地址作为参数传进去，所以每次测量的时候得到的数据都会存储到S_TscMeasDesc中，输出的时候根据S_aszMeasInfo的描述信息输出测量数据
+回到do while，执行myAppWorkpd后就是发送数据帧，在之后执行用户程序eUsrJob_MasterTimer，最后发送排队的非循环数据帧
+
+
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************

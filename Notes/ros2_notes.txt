@@ -1,0 +1,129 @@
+******************************************************************************************
+******************************************************************************************
+ros foxy官方教程
+https://docs.ros.org/en/foxy/index.html
+******************************************************************************************
+******************************************************************************************
+ROS_DOMAIN_ID
+
+ros2是使用DDS来进行节点间的发现及通讯的，对于同一个物理网络下的不同逻辑网络之间的节点，如果使用相同的ROS_DOMAIN_ID，则可以相互发现与通讯，不同的ROS_DOMAIN_ID的节点们不可以通讯。默认为0，可以选择0~101，这个数字与网络端口号相关，取小的ID没啥注意的，取101这种大的时候要注意不要和linux内核中的端口号(32768 ~ 60999)冲突。
+ROS_DOMAIN_ID这是环境变量，也就是一台主机只有一个ROS_DOMAIN_ID
+******************************************************************************************
+******************************************************************************************
+ros2_controller
+
+1. 准备package
+--build-type ament_cmake
+要加入这个，其实默认就是这个，ament_cmake中添加了一些非常有用的宏，会大大降低cmakelist的书写及管理难度
+
+2.准备源文件
+就是代码
+Windows下要添加visibility_control.h，可以从别的地方复制一个过来改改
+
+3. 头文件声明（.hpp）
+1）要使用header guards
+说人话就是
+#ifndef __CTR_TEST_HPP                                                                                                                   
+#define __CTR_TEST_HPP
+......
+#endif
+2）包含必要的头文件
+controller_interface/controller_interface.hpp
+visibility_control.h（如果有的话）
+3）定义namespace
+通常使用蛇形命名法
+蛇形命名法(snake case)：file_name
+驼峰命名法(camel case)：fileName
+4）定义控制器的类
+扩展ControllerInterface，例如
+class my_ctr : public controller_interface::ControllerInterface
+5）定义函数
+添加一个没有参数的构造函数
+重定义
+init,  command_interface_configuration, state_interface_configuration, on_configure, on_activate, on_deactivate, update
+6）可选，添加两个protected string 向量储存关节名字和接口名字
+有些控制器需要这两个量作为参数
+
+4. 添加源文件（.cpp）
+1）包含头文件并添加命名空间
+2）可选，书写构造函数
+3）init
+The first line usually calls the parent init method. Here is the best place to initialize the variables, reserve memory, and most importantly, declare node parameters used by the controller. If everything works fine return controller_interface::return_type::OK or controller_interface::return_type::ERROR otherwise.
+说人话就是参数初始化、空间预留、声明节点参数
+4）on_configure
+参数通常在这里读取， 并确保控制器启动前的准备工作都完成
+5）command_interface_configuration和state_interface_configuration
+这里定义所需要的接口
+接口配置的三个选项：ALL，INDIVIDUAL，NONE
+ALL和NONE要求访问所有可使用的接口或都不访问，INDIVIDUAL配置需要一个详细的清单关于所需接口的名字，这些通常是作为参数提供的。The full interface names have structure <joint_name>/<interface_type>.
+6）on_activate
+检查和排序接口，并分配成员的初始值。此方法是实时循环的一部分，因此要避免任何内存预留，并且一般情况下尽可能地保持其简短
+7）on_deactivate
+不执行on_activate的时候执行这个，一般是空的，啥都不干
+也应尽可能的实时安全，和on_activate要求一样
+8）update
+最主要的入口点，这个方法应当受到实时性的限制。当调用此方法时，状态接口要有来自硬件的最新值，并且针对硬件的新命令应该写入命令接口。
+9）重要！
+在文件最后要加上PLUGINLIB_EXPORT_CLASS（工作空间外面），所以要包含头文件pluginlib/class_list_macros.hpp。
+例子
+PLUGINLIB_EXPORT_CLASS(
+    force_torque_sensor_broadcaster::ForceTorqueSensorBroadcaster,
+    controller_interface::ControllerInterface)
+
+5. 写导出定义，为了pluginlib
+1）创建<controller_name>.xml
+在package文件夹中，并不是在src中，在src的上一级
+例子：
+<library path="force_torque_sensor_broadcaster">
+    <class name="force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster"
+        type="force_torque_sensor_broadcaster::ForceTorqueSensorBroadcaster" base_class_type="controller_interface::ControllerInterface">
+    <description>
+        This controller publishes the readings of force-torque interfaces as geometry_msgs/WrenchStamped message.
+    </description>
+    </class>
+</library>  
+2）通常plugin名字是由命名空间名字和类名字确定的。当controller manager搜索它的时候，这个名字定义了控制器的类型。
+月隐
+6. 写简单的测试
+检查控制器是否能被发现和加载
+1）创建test，并创建test_load_<controller_name>.cpp
+2）复制其他地方的内容
+3）该最后一行内容（ASSERT_NO_THROW）
+
+7. CMakeLists.txt里添加编译指令
+1）在find_package(ament_cmake REQUIRED)这里添加依赖
+至少要有controller_interface, hardware_interface, pluginlib, rclcpp 和 rclcpp_lifecycle
+2）为提供<controller_name>.cpp作为源的共享库添加编译指令
+说人话是把src文件中的.cpp都作为源文件
+3）为库添加目标包含目录（targeted include directories）
+通常只有include
+4）添加库所需要的ament dependencies
+至少添加在1）中列的这些
+5）使用下面的指令导出pluginlib的描述文件
+code:: cmake
+    pluginlib_export_plugin_description_file(controller_interface <controller_name>.xml)
+6）为目标和包含目录添加安装指令
+Add install directives for targets and include directory.
+7）在test节那里添加下面的依赖
+ament_cmake_gmock, controller_manager, hardware_interface, ros2_control_test_assets
+8）对tests添加编译定义
+使用ament_add_gmock，详细的看别人咋写的
+9）可选，在ament_package之前添加控制器的库到ament_export_libraries中
+
+8. package.xml里添加依赖
+1）<depend>标签
+至少有controller_interface, hardware_interface, pluginlib, rclcpp and rclcpp_lifecycle
+2）<test_depend>标签
+至少有ament_add_gmock, controller_manager, hardware_interface, and ros2_control_test_assets
+
+9. 编译和测试控制器
+1）现在所有的事情都准备好了，可以去编译控制器了
+使用colcon build <controller_name_package>
+基础要去工作空间的根目录下执行该语句
+2）如果编译成功
+source install文件夹中的setup.bash
+执行colcon test <controller_name_package>去检查新的控制器能否通过pluginlib库找到并加载到controller manager里
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************

@@ -635,8 +635,162 @@ CC:=gcc
 CFLAG:= -Wall
 ******************************************************************************************
 ******************************************************************************************
+1、动态链接库的生成
+
+Makefile如下：
+#######################
+# Makefile
+#######################
+
+# compile and lib parameter
+CC      := g++
+LIBS    :=
+LDFLAGS :=
+DEFINES :=
+INCLUDE := -I.
+CFLAGS  := 
+CXXFLAGS:= 
+
+# link parameter
+LIB := libfunc.so
+
+#link
+$(LIB):func.o
+    $(CC) -shared -o -fPIC -o $@ $^
+#compile
+func.o:func.cpp
+    $(CC) -c -fPIC $^ -o $@ 
+
+# clean
+clean:
+    rm -fr *.o
+执行make命令之后，就可以在当前目录生成libfunc.so的动态链接库了。
+注意：动态链接库必须“以lib开头，以.so结尾”。
+注：缺少 -fPIC错误
+
+linux生成动态库时，如果遇到了relocation R_X86_64_32 against `.rodata‘ can not be used when making a shared object; recompile with -fPIC错误。
+解决方法：
+由于我的系统是AMD64位的，所以需要在编译的时候添加 -fPIC选项，重新清理编译。
+例如:
+
+#link
+$(LIB):func.o
+    $(CC) -shared -o -fPIC -o $@ $^
+#compile
+func.o:func.cpp
+    $(CC) -c -fPIC $^ -o $@ 
+
+2、动态链接库的调用
+引言：在第一部分中，我们将main.o和func.o两个目标文件进行链接，便生成了main可执行文件。如果甲方并没有提供func.cpp和func.o，只是提供了libfunc.so这个链接库，我们如何生成可执行文件呢？下文就是讲述如何利用动态库链接生成可执行文件。
+
+Makefile如下：
+1）编译的时候需要通过INCLUDE指明头文件的路径
+2）链接的时候需要通过LDFLAGS 和 LIBS指明动态库的路径和名称。这里需要注意的是，指明动态库名称时需要“掐头去尾”，例：我们需要用到 libfunc.so库，LIBS必须定义为 -lfunc 。
+3）执行的时候，需要把libfunc.so动态库拷贝到系统环境变量包含的路径下（比如/lib或/usr/lib），这样程序在运行时才能调用到动态库。
+
+#######################
+# Makefile
+#######################
+
+# target
+TARGET := main
+
+# compile and lib parameter
+CC      := g++
+LDFLAGS := -L/path/to/libfunc.so
+LIBS    := -lfunc
+DEFINES :=
+INCLUDE := -I/path/to/func.h
+CFLAGS  := 
+CXXFLAGS:= 
+
+# link
+$(TARGET):main.o
+    $(CC) -o $@ $^ $(LDFLAGS) $(LI
+
+#compile
+main.o:main.cpp
+    $(CC) $(INCLUDE) -c $^crm -fr $(TARGET)
+
+clean:
+    rm -fr *.o
+    rm -fr $(TARGET)
+
+3、静态链接库的生成
+引言：仍然利用上文中的main.cpp, func.cpp和func.h文件。下面，我们将func.cpp源文件制作成静态链接库func.a，然后调用该静态库对main.cpp进行编译链接。
+
+Makefile如下：
+注意：AR：配置链接器为ar
+
+#######################
+# Makefile
+#######################
+
+# compile and lib parameter
+CC      := g++
+LIBS    :=
+LDFLAGS := 
+DEFINES :=
+INCLUDE := -I.
+CFLAGS  := 
+CXXFLAGS:= 
+
+# link parameter
+AR  := ar
+LIB := func.a
+
+#link
+$(LIB):func.o
+    $(AR) -r $@ $^
+#compile
+func.o:func.cpp
+    $(CC) -c $^ -o $@ 
+
+# clean
+clean:
+    rm -fr *.o
+执行make命令之后，就可以在当前目录生成func.a的静态链接库了。
+注意：静态链接库必须“以.a结尾”。
+
+4、静态链接库的调用
+引言：在第一部分中，我们将main.o和func.o两个目标文件进行链接，便生成了main可执行文件；第二部分，我们将main.o和libfunc.so进行链接，也可以生成main可执行文件。如果我们既没有func.o也没有func.so，该如何生成可执行文件呢？下文就是讲述如何利用静态库func.a链接生成可执行文件。
+
+Makefile如下：
+1）编译的时候需要通过INCLUDE指明头文件的路径
+2）链接的时候需要通过LDFLAGS 和 LIBS指明静态库的路径和名称。这里不需要像动态库那样“掐头去尾”，直接写作func.a即可。
+3）执行的时候，不需要拷贝func.a至环境变量包含的路径，直接执行即可。
+
+#######################
+# Makefile
+#######################
+
+# target
+TARGET := main
+
+# compile and lib parameter
+CC      := g++
+LDFLAGS := -L.
+LIBS    := func.a
+DEFINES :=
+INCLUDE := -I.
+CFLAGS  := 
+CXXFLAGS:= 
+
+# link
+$(TARGET):main.o
+    $(CC) -o $@ $^ $(LIBS)
+#compile
+main.o:main.cpp
+    $(CC) -c $^ -o $@
+
+# clean
+clean:
+    rm -fr *.o
+    rm -fr $(TARGET)
 ******************************************************************************************
 ******************************************************************************************
+gcc g++想要编译32位程序，需要安装gcc-multilib g++-multilib
+Linux默认生成64位应用程序，需要在程序的生成选项中添加-m32才能使其生成32位代码，就是g++ -m32
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************

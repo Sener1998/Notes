@@ -261,12 +261,11 @@ ls | tee -a test.log
 如果不想把整个硬盘克隆出来(带引导文件)，只想复制出来一部分文件，则直接在这一步把文件拷出来
 2.2执行fdisk指令查看硬盘信息(该模式下，sudo直接用，不需要密码)
 sudo fdisk -u -l
-2.3(可选)将额外的存储器挂载到/mnt，由于u盘比较小，可能无法存储克隆出的镜像文件
+2.3将额外的存储器挂载到/mnt，由于启动盘被作为cdrom加载，所以只有可读权限，无法存储克隆出的镜像文件
 sudo mkdir /mnt/usb
 sudo mount /dev/sdb2  /mnt/usb/  (/dev/sdb2为另外一个u盘的第二个分区)
 2.4执行dd指令将硬盘的数据打包复制出来
-sudo dd ps=512 count=62531584 if=/dev/sda of=/mnt/usb/data.img  (以克隆/dev/sda硬盘为例)
-ps=512                 表示512k为1个block的尺寸
+sudo dd count=62531584 if=/dev/sda of=/mnt/usb/data.img  (以克隆/dev/sda硬盘为例)
 count=62531584 表示复制62531584个block这个数量的计算方法是，将fdisk步骤中需要克隆的硬盘的end最后一位的值加1
 在这一步会有问题，因为直接生成img文件的话，它是和硬盘总大小相同的，所以对于比较大容量但是实际数据较少的硬盘直接生成img文件太亏
 所以可以在克隆过程中可以同时进行压缩
@@ -281,6 +280,7 @@ gzip 使用压缩指令，默认是6级压缩，有1~9共9个等级，等级越�
 如果启动时卡在Switched to clocksource tsc随后进入initramfs状态那么添加硬盘是选择IDE类型，不要使用推荐的SCSI
 如果启动时出现Waiting for network configuration并且有长时间的等待，如果不需要，则在修改/etc/init/failsafe.conf
 将第一个sleep 20 改成sleep 5，后面的都注释掉
+补充：如果系统启动不起来大概率是硬盘类型的问题，换成IDE就好了
 2.7破解密码
 不要直接进入ubuntu，而是进入Advanced Options for Ubuntu，找到带recovery mode的选型，按e键进入参数设置页面
 删掉recovery nomodeset，再在该行最后添加quiet splash rw init=/bin/bash，最后按F10启动，输入passwd改密码
@@ -370,16 +370,23 @@ linux内核打实施补丁+ubuntu换linux内核
 patch -p1 < patch-5.4.161-rt67-rc1.patch
 
 3. 配置Linux内核
-make manuconfig
+make menuconfig
 开启实时功能，勾选下面功能
 General setup -> Preemption Model (Fully Preemptible Kernel (Real-Time)) 
 -> Fully Preemptible Kernel (Real-Time)
+若出现lexer.lex.c编译失败的问题则要安装flex和bison
+sudo apt-get install flex
+sudo apt-get install fison
 
 4. 编译内核+安装内核
-编译内核前安装libssl-dev 
-sudo apt-get install libssl-dev
-sudo aptitude   install libssl-dev (或)
 make -j4
+make INSTALL_MOD_STRIP=1 modules_install  在/lib/modules里创建文件夹存放要加载的模块 
+make install                  复制文件到/boot
+编译时可能会发生的问题：
+编译内核前安装libssl-dev     sudo apt-get install libssl-dev
+出现debian/certs之类的问题，则要把.config里的CONFIG_SYSTEM_TRUSTED_KEY设置成""
+pahole(pahole) is not available   sudo apt-get install dwarves
+Cannot use CONFIG_STACK_VALIDATION=y   sudo apt-get install libelf-dev
 
 5. 更新gurb
 sudo update-grub
@@ -554,6 +561,81 @@ split [–help][–version][-<行数>][-b <字节>][-C <字节>][-l <行数>][�
 使用例子：
 split -b 100m 1111.log (按照字节分隔)
 split -l 1000000 1111.log(按照行数分隔)
+******************************************************************************************
+******************************************************************************************
+在ubuntu中使用不同的权限打开qt程序，窗口的样式是不一样的
+这个问题可以通过下面的方案解决，添加-style=gtk+
+$sudo ./app -style=gtk+
+或者在程序中添加
+qApp->setStyle("gtk+")
+******************************************************************************************
+******************************************************************************************
+Ubuntu 内核文件清理
+1. deinstall 软件清理
+#列出已经删除可是状态为deinstall的软件
+dpkg --get-selections | grep deinstall | cut -f1
+#删除状态为deinstall的软件
+sudo dpkg --purge `dpkg --get-selections | grep deinstall | cut -f1`（注意 ` 这个符号，不是单引号，和波浪线~是一个键）
+或者 dpkg --purge 'dpkg --get-selections | awk '$2 == "deinstall" {print $1}'
+
+2. 内核Image清理
+grub启动的时候可选的内核越来越多, boot 目录下启动相关文件越来越多
+#先查看系统当前内核版本
+uname -a
+#查看全部内核版本
+dpkg --get-selections | grep linux
+#删除非当前内核版本
+apt-get purge linux-image-xxx
+apt-get purge linux-headers-xxx
+apt-get purge linux-modules-xxx
+apt-get purge linux-signed-xxx
+******************************************************************************************
+******************************************************************************************
+1、 特意提醒新手注意一下，下面的在桌面版的Ubuntu系统下尽量不要使用：
+apt-get autoremove
+删除已安装的软件包（保留配置文件），不会删除依赖软件包，且保留配置文件。（这个命令容易导致系统无法进入系统桌面）
+2、
+apt-get remove
+  删除已安装的软件包（保留配置文件）
+3、
+apt-get purge / apt-get --purge remove
+删除已安装包（不保留配置文件)，删除软件包，同时删除相应依赖软件包。 
+4、
+apt-get  clean
+此命令会将 /var/cache/apt/archives/ 下的 所有 deb 删掉，相当于清理下载的软件安装包。
+5、
+apt-get  autoclean
+ 删除为了满足某些依赖安装的，但现在不再需要的软件包。
+******************************************************************************************
+******************************************************************************************
+deb http://mirrors.aliyun.com/ubuntu/ bionic main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ bionic-security main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ bionic-updates main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ bionic-proposed main restricted universe multiverse
+deb http://mirrors.aliyun.com/ubuntu/ bionic-backports main restricted universe multiverse
+deb-src http://mirrors.aliyun.com/ubuntu/ bionic main restricted universe multiverse
+deb-src http://mirrors.aliyun.com/ubuntu/ bionic-security main restricted universe multiverse
+deb-src http://mirrors.aliyun.com/ubuntu/ bionic-updates main restricted universe multiverse
+deb-src http://mirrors.aliyun.com/ubuntu/ bionic-proposed main restricted universe multiverse
+deb-src http://mirrors.aliyun.com/ubuntu/ bionic-backports main restricted universe multiverse
+******************************************************************************************
+******************************************************************************************
+linux内核+实时补丁 配置推荐
+
+1.取消Virtualization
+
+
+
+
+
+
+
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
+******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************

@@ -8,7 +8,7 @@ step 1. 立项
 step 2. rtl
     1) CBB   数字基础模块（Commen Basic Module），就是编写的各种模块
     2) SoC    由许多CBB拼接而成，连接各个模块
-    3) 验证   ST(system test)    BT(block test)    UT(unit test)(带cpu)
+    3) 验证   ST(system test)    BT(block test)    UT(unit test)(带cpu) 
 
 step 3-1. FPGA
     rtl写完之后可以使用FPGA例化，直接在FPGA上跑
@@ -51,7 +51,7 @@ signoff 通过标准
 
 CRG 时钟复位（Clock Reset Generator）
 
-综合  rtl->netlist  我们使用软件DC
+综合  rtl->netlist  我们使用软件DC tcl脚本语言
 stand cell  标准元模块
 lib/db
 sdc 工作约束
