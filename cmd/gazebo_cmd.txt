@@ -3,7 +3,7 @@
 	source ~/.bashrc
 
 在Gazebo仿真环境中对ur5进行控制:
-	source ./catkin_ws/devel/setup.bash 
+	source ~/catkin_ws/devel/setup.bash 
 	roslaunch ur_gazebo ur5.launch limited:=true
 	roslaunch ur5_moveit_config ur5_moveit_planning_execution.launch sim:=true limited:=true
 	roslaunch ur5_moveit_config moveit_rviz.launch config:=true
