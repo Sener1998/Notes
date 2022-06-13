@@ -715,8 +715,29 @@ extern int func1(void);
 首先加载定义该函数的模块，再加载调用该函数的模块。
 ******************************************************************************************
 ******************************************************************************************
+我理解module.mk和Android.mk是一回事
+ko文件编译的.mk文件
+LOCAL_PATH := $(call my-dir)                              获取当前目录
+include $(CLEAR_VARS)
+LOCAL_MODULE := xxx                                        模块名
+LOCAL_KO_SRC_FOLDER := $(LOCAL_PATH)          ko源文件目录
+LOCAL_INSTALLED_KO_FILES := xxx.ko                 安装的ko
+include $(BUILD_DEVICE_KO)
+
+CLEAR_VARS指的是clear_vars.mk，由编译系统提供，它会让GNU MAKEFILE为你清除除LOCAL_PATH以外的所有LOCAL_XXX变量，
+如LOCAL_MODULE，LOCAL_SRC_FILES，LOCAL_SHARED_LIBRARIES，LOCAL_STATIC_LIBRARIES等。
+这是必要的，因为所有的编译控制文件都在同一个GNU MAKE执行环境中，所有的变量都是全局的。
+
+include $(BUILD_PACKAGE)是用来编译生成package/app/下的apk。
+include $(BUILD_STATIC_LIBRARY)   表示编译成静态库
+include $(BUILD_SHARED_LIBRARY)  表示编译成动态库
+include $(BUILD_EXECUTABLE)      表示编译成可执行程序      
 ******************************************************************************************
 ******************************************************************************************
+res = 832       delta_clock = 41  // 12*64+64
+res = 832       delta_clock = 1   //  (12+1)*64
+res = 832       delta_clock = 1   //  (12<<6)+64
+res = 832       delta_clock = 1   //  (12+1)<<6
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
