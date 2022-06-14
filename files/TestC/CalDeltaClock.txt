@@ -1,0 +1,80 @@
+#include <stdio.h>
+#include <time.h>
+#include <string.h>
+
+#define VAR_NAME(x) (#x)
+
+#define COUNT_MAX 10000000
+static clock_t CalDeltaClock(void (*p)(void));
+static volatile clock_t start;
+static volatile clock_t end;
+static int count;
+/* test function */
+void fun1()
+{
+    char *src = "123465";
+    char des[512];
+    strcpy(des,src);
+    //printf("strcpy: len = %ld\t",strlen(src));
+}
+void fun2()
+{
+    char *src = "123456";
+    char des[512];
+    memcpy(des,src,strnlen(src,512)+1);
+    //printf("memcpy: len = %ld\t",strnlen(src,512));
+}
+void fun3()
+{
+    int nums = 12;
+    int res = (nums << 6) + 64;
+}
+void fun4()
+{
+    int nums = 12;
+    int res = (nums+1)*64;
+}
+
+/* main */
+int main()
+{
+    count = COUNT_MAX;
+    start = clock();
+    printf("start = %ld\n",start);
+
+    void (*p[4])(void) = {NULL};
+    //p[0] = &fun1;
+    //p[1] = &fun2;
+    //p[2] = &fun3;
+    //p[3] = &fun4;
+    for(int i=0;i<4;++i){
+        CalDeltaClock(p[i]);
+    }
+
+/*
+    int nums=1;
+    char *str="123456";
+    printf("%ld   %ld \n",strlen(str),strnlen(str,10));
+*/
+    return 0;
+}
+
+
+static clock_t CalDeltaClock(void (*p)(void))
+{
+    if(!p)
+        return 0;
+    start = clock();
+    while(count>0){
+        p();
+	--count;
+    }
+    end = clock();
+    printf("delta_clock = %lf\t start = %ld\t end = %ld\n",(double)(end-start)/CLOCKS_PER_SEC,start,end);
+    count = COUNT_MAX;
+    return end-start;
+}
+
+
+
+
