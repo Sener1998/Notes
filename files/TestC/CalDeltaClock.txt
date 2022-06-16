@@ -42,13 +42,13 @@ int main()
     start = clock();
     printf("start = %ld\n",start);
 
-    void (*p[4])(void) = {NULL};
-    //p[0] = &fun1;
-    //p[1] = &fun2;
-    //p[2] = &fun3;
-    //p[3] = &fun4;
+    void (*pf[4])(void) = {NULL};
+    //pf[0] = &fun1;
+    //pf[1] = &fun2;
+    //pf[2] = &fun3;
+    //pf[3] = &fun4;
     for(int i=0;i<4;++i){
-        CalDeltaClock(p[i]);
+        CalDeltaClock(pf[i]);
     }
 
 /*
@@ -60,17 +60,17 @@ int main()
 }
 
 
-static clock_t CalDeltaClock(void (*p)(void))
+static clock_t CalDeltaClock(void (*pf)(void))
 {
-    if(!p)
-        return 0;
+    if(!pf) return 0;
     start = clock();
+    count = COUNT_MAX;
     while(count>0){
-        p();
+        pf();
 	--count;
     }
     end = clock();
-    printf("delta_clock = %lf\t start = %ld\t end = %ld\n",(double)(end-start)/CLOCKS_PER_SEC,start,end);
+    printf("time = %lf\t start = %ld\t end = %ld\n",(double)(end-start)/CLOCKS_PER_SEC,start,end);
     count = COUNT_MAX;
     return end-start;
 }
