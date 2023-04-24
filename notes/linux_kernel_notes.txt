@@ -111,6 +111,32 @@ spin_unlock_irqrestore(&mr_lock,flag);
 信号量是一种睡眠锁
 ******************************************************************************************
 ******************************************************************************************
+在4.15内核里，init_timer被移除了。需要换用新的timer_setup接口。
+------------------------------------------------------------------------------------------
+#if 如果Linux内核版本 < KERNEL_VERSION(4,14,0)
+    init_timer(&dev->getIntrTimer);
+    dev->getIntrTimer.data = (unsigned long) dev;
+    dev->getIntrTimer.function = GetIntrTimerCallback;
+    /* ... */
+    add_timer(&dev->getIntrTimer);
+#else
+    timer_setup(&dev->getIntrTimer, GetIntrTimerCallback, 0);
+    /* the third argument may include TIMER_* flags */
+    /* ... */
+#endif
+------------------------------------------------------------------------------------------
+The callback function的语法修改
+
+#if 如果Linux内核版本 < KERNEL_VERSION(4,14,0)
+void GetIntrTimerCallback(unsigned long devAddr)
+{
+    myDevice *dev = (myDevice *) devAddr;
+#else
+void GetIntrTimerCallback(struct timer_list *t)
+{
+    myDevice *dev = from_timer(dev, t, getIntrTimer);
+#endif
+    /* Do something with "dev" */
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
