@@ -1,5 +1,10 @@
 ******************************************************************************************
 ******************************************************************************************
+https://en.cppreference.com
+https://www.cplusplus.com
+******************************************************************************************
+******************************************************************************************
+
 内存管理注意事项
 ------------------------------------------------------------------------------------------
 	在嵌入式系统中使用C++的一个常见问题是内存分配，即对new 和 delete 操作符的失控。
@@ -191,7 +196,6 @@ class Entity
 {
 private:
 	int* m_p;
-
 public:
 	Entity() = delete;
 	Entity(const int& data)
@@ -202,7 +206,6 @@ public:
 	{
 		m_p = new int(*(other.m_p));
 	}
-
 	~Entity() { delete m_p; }
 };
 ******************************************************************************************
@@ -283,8 +286,8 @@ C++风格的类型转换
 可以将带const的类型转换成不带const的，并不意味着原来带const的不带了，而是转换后的那个不带了
 ******************************************************************************************
 ******************************************************************************************
+（C++17的新特性）
 多返回值的函数可以使用std::tuple和auto来实现
-要注意的是这是C++17的新特性
 std::tuple<std::string, int> test()
 {
 	return { "haha", 5 };
@@ -293,12 +296,105 @@ std::tuple<std::string, int> test()
 auto [name, age] = test();
 ******************************************************************************************
 ******************************************************************************************
+（C++17的新特性）
+对于不确定是否有返回值的函数可以这么处理
+std::optional<std::string> GetString(bool flag)
+{
+	if (flag)
+	{
+		return "haha";
+	}
+	return {};
+}
+
+auto str = GetString(true);
+std::string s1 = str.value_or("fuck");
+std::cout << str.value() << "\n";
+
+str = GetString(false);
+std::string s2 = str.value_or("fuck");
+std::cout << s2 << "\n";
+
+s1收到了"haha"
+s2没有收到"haha"，所以是默认值"fuck"
 ******************************************************************************************
 ******************************************************************************************
+（C++17的新特性）
+不确定v的类型具体是啥可以这么搞，用的时候判断一下是什么类型
+std::variant<int, double> v;
+v = 210.0;
+if (auto p = std::get_if<int>(&v))
+{
+	std::cout << "int " << *p << "\n";
+}
+else
+{
+	std::cout << "double " << std::get<double>(v) << "\n";
+}
 ******************************************************************************************
 ******************************************************************************************
+重载<<以输出自定义类型数据
+static std::ostream& operator<<(std::ostream& out, const std::array<float, 6>& data) {
+	for (auto i : data) {
+		out << i << ' ';
+	}
+	return out;
+}
 ******************************************************************************************
 ******************************************************************************************
+构造函数大全，应有尽有
+
+class Name {
+private:
+	char* m_Name;
+public:
+	Name() = delete;
+	Name(const char* name) {
+		const int len = strlen(name);
+		m_Name = new char[len + 1];
+		strcpy_s(m_Name, len + 1, name);
+		std::cout << "Copy\n";
+	}
+	Name(const Name& other) {
+		const int len = strlen(other.m_Name);
+		m_Name = new char[len + 1];
+		strcpy_s(m_Name, len + 1, other.m_Name);
+		std::cout << "Copy\n";
+	}
+	Name(Name&& other) noexcept {
+		m_Name = other.m_Name;
+		other.m_Name = nullptr;
+		std::cout << "Move\n";
+	}
+	Name& operator=(Name& other) noexcept {
+		const int len = strlen(other.m_Name);
+		m_Name = new char[len + 1];
+		strcpy_s(m_Name, len + 1, other.m_Name);
+		std::cout << "Copy\n";
+		return *this;
+	}
+	Name& operator=(Name&& other) noexcept {
+		if (this != &other) {
+			delete[] m_Name;
+			m_Name = other.m_Name;
+			other.m_Name = nullptr;
+			std::cout << "Move\n";
+		}
+		return *this;
+	}
+
+	~Name() {
+		delete[] m_Name;
+		m_Name = nullptr;
+		std::cout << "Destroy\n";
+	}
+
+	void Print() {
+		if (m_Name != nullptr) {
+			std::cout << m_Name << '\n';
+		}
+	}
+};
 ******************************************************************************************
 ******************************************************************************************
 ******************************************************************************************
